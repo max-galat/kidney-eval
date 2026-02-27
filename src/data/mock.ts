@@ -276,10 +276,15 @@ function buildDynamicAnalysis(
   const nonKdpiNeg = shapValues.filter((s) => NON_KDPI_FEATURES.has(s.feature) && s.impact < 0).sort((a, b) => a.impact - b.impact);
 
   let part2: string;
-  if (diffPct > 5) {
-    const f0 = nonKdpiPos[0]?.label ?? 'pump perfusion characteristics';
-    const f1 = nonKdpiPos[1]?.label ?? 'biopsy findings';
-    part2 = `Our model estimates ${diffPct}% higher survival than KDPI suggests, primarily because KDPI does not account for ${f0} and ${f1}.`;
+  if (diffPct > 5 && nonKdpiPos.length > 0) {
+    const f0 = nonKdpiPos[0].label;
+    const f1 = nonKdpiPos[1]?.label;
+    part2 = f1
+      ? `Our model estimates ${diffPct}% higher survival than KDPI suggests, primarily because KDPI does not account for ${f0} and ${f1}.`
+      : `Our model estimates ${diffPct}% higher survival than KDPI suggests, primarily because KDPI does not account for ${f0}.`;
+  } else if (diffPct > 5) {
+    const f0 = nonKdpiNeg[0]?.label ?? 'additional risk factors';
+    part2 = `Our model estimates ${diffPct}% higher survival than KDPI suggests, despite ${f0} — KDPI may overestimate risk for this donor profile.`;
   } else if (diffPct < -3) {
     const f0 = nonKdpiNeg[0]?.label ?? 'factors KDPI does not penalize';
     part2 = `Our model estimates ${Math.abs(diffPct)}% lower survival than KDPI suggests, driven by ${f0} which KDPI does not penalize.`;
@@ -430,6 +435,31 @@ export function rankCandidates(donor: DonorInput, candidates: CandidateRecipient
 }
 
 // ---------------------------------------------------------------------------
+// Recipient SHAP entries (mirrors applyRecipientAdjustment deltas exactly)
+// ---------------------------------------------------------------------------
+
+function buildRecipientShapEntries(recipient: RecipientInput | null | undefined): ShapValue[] {
+  if (!hasRecipientFactors(recipient)) return [];
+  const r = recipient!;
+  const entries: ShapValue[] = [];
+  if (r.recipient_age !== null) {
+    if (r.recipient_age > 65)
+      entries.push({ feature: 'recipient_age', label: `Recipient Age (${r.recipient_age})`, value: r.recipient_age, impact: 0.03 });
+    else if (r.recipient_age < 40)
+      entries.push({ feature: 'recipient_age', label: `Recipient Age (${r.recipient_age})`, value: r.recipient_age, impact: -0.02 });
+  }
+  if (r.recipient_dialysis_months !== null && r.recipient_dialysis_months > 60)
+    entries.push({ feature: 'recipient_dialysis_months', label: `Dialysis Duration (${r.recipient_dialysis_months}mo)`, value: r.recipient_dialysis_months, impact: 0.02 });
+  if (r.recipient_diabetes)
+    entries.push({ feature: 'recipient_diabetes', label: 'Recipient Diabetes', value: true, impact: -0.02 });
+  if (r.recipient_prior_transplant)
+    entries.push({ feature: 'recipient_prior_transplant', label: 'Prior Transplant', value: true, impact: -0.02 });
+  if (r.recipient_bmi !== null && r.recipient_bmi > 35)
+    entries.push({ feature: 'recipient_bmi', label: `Recipient BMI (${r.recipient_bmi})`, value: r.recipient_bmi, impact: -0.01 });
+  return entries;
+}
+
+// ---------------------------------------------------------------------------
 // Core prediction function
 // ---------------------------------------------------------------------------
 
@@ -462,6 +492,11 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
   const predicted = applyRecipientAdjustment(basePredicted, recipient);
   const declineStats = generateDeclineStats(predicted, rand);
 
+  // Combine donor + recipient SHAP so waterfall bars sum to finalPrediction.
+  // Analysis text uses only donor SHAP (sortedShap) to keep Parts 1–3 donor-focused.
+  const recipientShap = buildRecipientShapEntries(recipient);
+  const allShapValues = [...sortedShap, ...recipientShap].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
+
   const mockKdpi = Math.min(99, Math.max(1, Math.round(
     40 + (donor.donor_age - 30) * 0.8
     + (donor.donor_hypertension ? 8 : 0)
@@ -487,7 +522,7 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
     model_assessment: modelAssessment,
     prediction_confidence: confidence,
     divergence_explanation: buildDynamicAnalysis(sortedShap, similarKidneys, predicted, kdpiSurvival, recipient),
-    shap_values: sortedShap,
+    shap_values: allShapValues,
     similar_kidneys: similarKidneys,
     decline_stats: declineStats,
   };
