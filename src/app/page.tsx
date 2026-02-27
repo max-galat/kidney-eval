@@ -5,8 +5,9 @@ import { DonorInput, PredictionResult } from '@/types';
 import { DEFAULT_DONOR, getMockPrediction } from '@/data/mock';
 import DonorForm from '@/components/DonorForm';
 import SurvivalHero from '@/components/SurvivalHero';
+import DeclineStats from '@/components/DeclineStats';
+import { SimilarKidneysSummary, SimilarKidneysTable } from '@/components/SimilarKidneys';
 import ShapWaterfall from '@/components/ShapWaterfall';
-import SimilarKidneys from '@/components/SimilarKidneys';
 
 export default function Home() {
   const [donor, setDonor] = useState<DonorInput>(DEFAULT_DONOR);
@@ -31,20 +32,31 @@ export default function Home() {
       {/* Form */}
       <DonorForm donor={donor} onChange={setDonor} onSubmit={handleEvaluate} />
 
-      {/* Results */}
+      {/* Results — new section order per Daniel's spec */}
       {result && (
         <div className="mt-8 space-y-6 animate-in fade-in duration-300">
+          {/* 1. Prediction cards (Our Model vs KDPI) */}
           <SurvivalHero result={result} />
+
+          {/* 2. "If you decline" section */}
+          <DeclineStats stats={result.decline_stats} />
+
+          {/* 3. Similar kidneys summary stats */}
+          <SimilarKidneysSummary kidneys={result.similar_kidneys} />
+
+          {/* 4. SHAP waterfall */}
           <ShapWaterfall
             shapValues={result.shap_values}
             basePrediction={0.92}
             finalPrediction={result.predicted_1yr_survival}
           />
-          <SimilarKidneys kidneys={result.similar_kidneys} />
+
+          {/* 5. Similar kidneys detail table */}
+          <SimilarKidneysTable kidneys={result.similar_kidneys} />
         </div>
       )}
 
-      {/* Regulatory disclaimer */}
+      {/* Disclaimer */}
       <footer className="mt-12 border-t border-gray-200 pt-6 pb-8">
         <p className="text-xs text-gray-400 leading-relaxed max-w-2xl">
           This tool provides supplementary information only. Clinical judgment should guide all

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { DonorInput } from '@/types';
 
 interface Props {
@@ -89,6 +90,43 @@ function SelectField({
   );
 }
 
+function CollapsibleSection({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full border-t border-b border-gray-100 px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+      >
+        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+          {title}
+          <span className="ml-2 text-xs font-normal text-emerald-600 normal-case">{subtitle}</span>
+        </h2>
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && children}
+    </>
+  );
+}
+
 export default function DonorForm({ donor, onChange, onSubmit }: Props) {
   const set = <K extends keyof DonorInput>(key: K) => (val: DonorInput[K]) =>
     onChange({ ...donor, [key]: val });
@@ -117,24 +155,23 @@ export default function DonorForm({ donor, onChange, onSubmit }: Props) {
         <Toggle label="DCD" value={donor.donor_dcd} onChange={set('donor_dcd')} />
       </div>
 
-      {/* Additional Factors */}
-      <div className="border-t border-b border-gray-100 px-6 py-4">
-        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-          Additional Factors
-          <span className="ml-2 text-xs font-normal text-emerald-600 normal-case">not in KDPI — our value-add</span>
-        </h2>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-6 py-5">
-        <NumberField label="Biopsy Glomerulosclerosis" value={donor.donor_biopsy_glomerulosclerosis} unit="%" onChange={set('donor_biopsy_glomerulosclerosis')} />
-        <NumberField label="Pump Resistance" value={donor.donor_pump_resistance} unit="mmHg/mL/min" onChange={set('donor_pump_resistance')} />
-        <NumberField label="Pump Flow" value={donor.donor_pump_flow} unit="mL/min" onChange={set('donor_pump_flow')} />
-        <NumberField label="Cold Ischemia Time" value={donor.cold_ischemia_hours} unit="hrs" onChange={set('cold_ischemia_hours') as (v: number | null) => void} />
-        <NumberField label="Terminal Creatinine" value={donor.donor_terminal_creatinine} unit="mg/dL" onChange={set('donor_terminal_creatinine')} />
-        <NumberField label="eGFR" value={donor.donor_egfr} unit="mL/min" onChange={set('donor_egfr')} />
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 pb-5">
-        <Toggle label="Donor on Dialysis" value={donor.donor_on_dialysis} onChange={set('donor_on_dialysis')} />
-      </div>
+      {/* Additional Factors — collapsible */}
+      <CollapsibleSection
+        title="Additional Factors"
+        subtitle="optional — improves prediction accuracy"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-6 py-5">
+          <NumberField label="Biopsy Glomerulosclerosis" value={donor.donor_biopsy_glomerulosclerosis} unit="%" onChange={set('donor_biopsy_glomerulosclerosis')} />
+          <NumberField label="Pump Resistance" value={donor.donor_pump_resistance} unit="mmHg/mL/min" onChange={set('donor_pump_resistance')} />
+          <NumberField label="Pump Flow" value={donor.donor_pump_flow} unit="mL/min" onChange={set('donor_pump_flow')} />
+          <NumberField label="Cold Ischemia Time" value={donor.cold_ischemia_hours} unit="hrs" onChange={set('cold_ischemia_hours') as (v: number | null) => void} />
+          <NumberField label="Terminal Creatinine" value={donor.donor_terminal_creatinine} unit="mg/dL" onChange={set('donor_terminal_creatinine')} />
+          <NumberField label="eGFR" value={donor.donor_egfr} unit="mL/min" onChange={set('donor_egfr')} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 pb-5">
+          <Toggle label="Donor on Dialysis" value={donor.donor_on_dialysis} onChange={set('donor_on_dialysis')} />
+        </div>
+      </CollapsibleSection>
 
       {/* Submit */}
       <div className="px-6 pb-6">

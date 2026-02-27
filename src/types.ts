@@ -40,12 +40,22 @@ export interface SimilarKidney {
   failure_cause?: string;
 }
 
+export interface DeclineStats {
+  median_wait_months: number;
+  pct_better_within_6mo: number;
+  pct_still_waiting_12mo: number;
+  high_demand: boolean;
+}
+
 export interface PredictionResult {
   predicted_1yr_survival: number;
   kdpi_score: number;
   kdpi_implied_risk: 'low' | 'moderate' | 'high';
+  kdpi_implied_survival: number;
   model_assessment: 'excellent' | 'acceptable' | 'marginal' | 'poor';
+  prediction_confidence: 'enhanced' | 'basic';
   divergence_explanation: string;
   shap_values: ShapValue[];
   similar_kidneys: SimilarKidney[];
+  decline_stats: DeclineStats;
 }
