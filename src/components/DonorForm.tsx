@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { DonorInput } from '@/types';
+import { DonorInput, RecipientInput } from '@/types';
 
 interface Props {
   donor: DonorInput;
   onChange: (donor: DonorInput) => void;
+  recipient: RecipientInput;
+  onRecipientChange: (recipient: RecipientInput) => void;
   onSubmit: () => void;
 }
 
@@ -127,9 +129,11 @@ function CollapsibleSection({
   );
 }
 
-export default function DonorForm({ donor, onChange, onSubmit }: Props) {
+export default function DonorForm({ donor, onChange, recipient, onRecipientChange, onSubmit }: Props) {
   const set = <K extends keyof DonorInput>(key: K) => (val: DonorInput[K]) =>
     onChange({ ...donor, [key]: val });
+  const setR = <K extends keyof RecipientInput>(key: K) => (val: RecipientInput[K]) =>
+    onRecipientChange({ ...recipient, [key]: val });
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -170,6 +174,30 @@ export default function DonorForm({ donor, onChange, onSubmit }: Props) {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 pb-5">
           <Toggle label="Donor on Dialysis" value={donor.donor_on_dialysis} onChange={set('donor_on_dialysis')} />
+        </div>
+      </CollapsibleSection>
+
+      {/* Recipient Information — collapsible */}
+      <CollapsibleSection
+        title="Recipient Information"
+        subtitle="optional — personalizes prediction"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-6 py-5">
+          <NumberField label="Recipient Age" value={recipient.recipient_age} unit="yrs" onChange={setR('recipient_age')} />
+          <NumberField label="Time on Dialysis" value={recipient.recipient_dialysis_months} unit="mo" onChange={setR('recipient_dialysis_months')} />
+          <NumberField label="Recipient BMI" value={recipient.recipient_bmi} onChange={setR('recipient_bmi')} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 pb-5">
+          <Toggle
+            label="Recipient Diabetes"
+            value={recipient.recipient_diabetes}
+            onChange={(v) => onRecipientChange({ ...recipient, recipient_diabetes: v })}
+          />
+          <Toggle
+            label="Prior Transplant"
+            value={recipient.recipient_prior_transplant}
+            onChange={(v) => onRecipientChange({ ...recipient, recipient_prior_transplant: v })}
+          />
         </div>
       </CollapsibleSection>
 

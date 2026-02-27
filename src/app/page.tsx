@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { DonorInput, PredictionResult } from '@/types';
-import { DEFAULT_DONOR, getMockPrediction } from '@/data/mock';
+import { DonorInput, RecipientInput, PredictionResult } from '@/types';
+import { DEFAULT_DONOR, DEFAULT_RECIPIENT, getMockPrediction } from '@/data/mock';
 import DonorForm from '@/components/DonorForm';
 import SurvivalHero from '@/components/SurvivalHero';
 import DeclineStats from '@/components/DeclineStats';
@@ -11,10 +11,11 @@ import ShapWaterfall from '@/components/ShapWaterfall';
 
 export default function Home() {
   const [donor, setDonor] = useState<DonorInput>(DEFAULT_DONOR);
+  const [recipient, setRecipient] = useState<RecipientInput>(DEFAULT_RECIPIENT);
   const [result, setResult] = useState<PredictionResult | null>(null);
 
   const handleEvaluate = () => {
-    setResult(getMockPrediction(donor));
+    setResult(getMockPrediction(donor, recipient));
   };
 
   return (
@@ -30,7 +31,13 @@ export default function Home() {
       </header>
 
       {/* Form */}
-      <DonorForm donor={donor} onChange={setDonor} onSubmit={handleEvaluate} />
+      <DonorForm
+        donor={donor}
+        onChange={setDonor}
+        recipient={recipient}
+        onRecipientChange={setRecipient}
+        onSubmit={handleEvaluate}
+      />
 
       {/* Results — new section order per Daniel's spec */}
       {result && (

@@ -12,18 +12,27 @@ export default function SurvivalHero({ result }: { result: PredictionResult }) {
   const s = colorForSurvival(modelPct);
   const k = colorForSurvival(kdpiPct);
   const isEnhanced = result.prediction_confidence === 'enhanced';
+  const isPersonalized = result.prediction_confidence === 'personalized';
 
   return (
     <div className="space-y-4">
-      {/* Confidence indicator */}
+      {/* Confidence indicator — 3-tier badge */}
       <div className="flex items-center gap-2">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-          isEnhanced
+          isPersonalized
+            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+            : isEnhanced
             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
             : 'bg-gray-50 text-gray-600 border border-gray-200'
         }`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${isEnhanced ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-          {isEnhanced ? 'Enhanced prediction' : 'Basic prediction (KDPI factors only)'}
+          <span className={`w-1.5 h-1.5 rounded-full ${
+            isPersonalized ? 'bg-blue-500' : isEnhanced ? 'bg-emerald-500' : 'bg-gray-400'
+          }`} />
+          {isPersonalized
+            ? 'Personalized prediction'
+            : isEnhanced
+            ? 'Enhanced prediction'
+            : 'Basic prediction (KDPI factors only)'}
         </span>
       </div>
 

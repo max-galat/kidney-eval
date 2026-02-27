@@ -47,13 +47,21 @@ export interface DeclineStats {
   high_demand: boolean;
 }
 
+export interface RecipientInput {
+  recipient_age: number | null;
+  recipient_dialysis_months: number | null;
+  recipient_bmi: number | null;
+  recipient_diabetes: boolean;
+  recipient_prior_transplant: boolean;
+}
+
 export interface PredictionResult {
   predicted_1yr_survival: number;
   kdpi_score: number;
   kdpi_implied_risk: 'low' | 'moderate' | 'high';
   kdpi_implied_survival: number;
   model_assessment: 'excellent' | 'acceptable' | 'marginal' | 'poor';
-  prediction_confidence: 'enhanced' | 'basic';
+  prediction_confidence: 'basic' | 'enhanced' | 'personalized';
   divergence_explanation: string;
   shap_values: ShapValue[];
   similar_kidneys: SimilarKidney[];
