@@ -6,63 +6,33 @@ const colorForSurvival = (pct: number) => {
   return { ring: 'border-red-400', text: 'text-red-600', bg: 'bg-red-50' };
 };
 
+/** Prediction cards only — badge and analysis text are rendered separately in page.tsx */
 export default function SurvivalHero({ result }: { result: PredictionResult }) {
   const modelPct = Math.round(result.predicted_1yr_survival * 100);
   const kdpiPct = Math.round(result.kdpi_implied_survival * 100);
   const s = colorForSurvival(modelPct);
   const k = colorForSurvival(kdpiPct);
-  const isEnhanced = result.prediction_confidence === 'enhanced';
-  const isPersonalized = result.prediction_confidence === 'personalized';
 
   return (
-    <div className="space-y-4">
-      {/* Confidence indicator — 3-tier badge */}
-      <div className="flex items-center gap-2">
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-          isPersonalized
-            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-            : isEnhanced
-            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            : 'bg-gray-50 text-gray-600 border border-gray-200'
-        }`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${
-            isPersonalized ? 'bg-blue-500' : isEnhanced ? 'bg-emerald-500' : 'bg-gray-400'
-          }`} />
-          {isPersonalized
-            ? 'Personalized prediction'
-            : isEnhanced
-            ? 'Enhanced prediction'
-            : 'Basic prediction (KDPI factors only)'}
-        </span>
+    <div className="grid grid-cols-2 gap-4">
+      {/* Our model */}
+      <div className={`rounded-xl border-2 ${s.ring} ${s.bg} p-6 text-center`}>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Our Model</p>
+        <p className={`text-5xl font-bold ${s.text}`}>{modelPct}%</p>
+        <p className="text-sm text-gray-600 mt-1">1-Year Graft Survival</p>
+        <p className={`mt-2 inline-block rounded-full px-3 py-0.5 text-xs font-medium ${s.text} ${s.bg}`}>
+          {result.model_assessment}
+        </p>
       </div>
 
-      {/* Side-by-side cards — both show 1yr survival */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Our model */}
-        <div className={`rounded-xl border-2 ${s.ring} ${s.bg} p-6 text-center`}>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Our Model</p>
-          <p className={`text-5xl font-bold ${s.text}`}>{modelPct}%</p>
-          <p className="text-sm text-gray-600 mt-1">1-Year Graft Survival</p>
-          <p className={`mt-2 inline-block rounded-full px-3 py-0.5 text-xs font-medium ${s.text} ${s.bg}`}>
-            {result.model_assessment}
-          </p>
-        </div>
-
-        {/* KDPI — converted to same unit */}
-        <div className={`rounded-xl border-2 ${k.ring} ${k.bg} p-6 text-center`}>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">KDPI Estimate</p>
-          <p className={`text-5xl font-bold ${k.text}`}>{kdpiPct}%</p>
-          <p className="text-sm text-gray-600 mt-1">1-Year Graft Survival</p>
-          <p className="mt-2 inline-block rounded-full px-3 py-0.5 text-xs font-medium text-gray-500 bg-gray-100">
-            KDPI {result.kdpi_score} percentile
-          </p>
-        </div>
-      </div>
-
-      {/* Divergence explanation */}
-      <div className="rounded-lg border border-gray-200 bg-white px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Analysis</p>
-        <p className="text-sm text-gray-700 leading-relaxed">{result.divergence_explanation}</p>
+      {/* KDPI — converted to same unit */}
+      <div className={`rounded-xl border-2 ${k.ring} ${k.bg} p-6 text-center`}>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">KDPI Estimate</p>
+        <p className={`text-5xl font-bold ${k.text}`}>{kdpiPct}%</p>
+        <p className="text-sm text-gray-600 mt-1">1-Year Graft Survival</p>
+        <p className="mt-2 inline-block rounded-full px-3 py-0.5 text-xs font-medium text-gray-500 bg-gray-100">
+          KDPI {result.kdpi_score} percentile
+        </p>
       </div>
     </div>
   );

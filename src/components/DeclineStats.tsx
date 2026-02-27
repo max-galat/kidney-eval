@@ -1,15 +1,17 @@
 import { DeclineStats as DeclineStatsType } from '@/types';
 
 export default function DeclineStats({ stats }: { stats: DeclineStatsType }) {
-  // Excellent quality — rarely declined, hide stats
+  // Excellent quality — show acceptance likelihood, hide wait stats
   if (stats.high_demand) {
+    const rate = stats.acceptance_rate ?? 92;
     return (
-      <div className="rounded-xl border border-blue-200 bg-blue-50 shadow-sm px-6 py-5">
-        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-2">
-          If You Decline a Kidney Like This
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 shadow-sm px-6 py-5">
+        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-1">
+          Acceptance Likelihood
         </h2>
-        <p className="text-sm text-blue-700">
-          Kidneys in this quality range are rarely declined. Most centers accept immediately.
+        <p className="text-sm text-emerald-800">
+          Kidneys in this quality range have a <span className="font-semibold">{rate}%</span> national
+          acceptance rate. Declining is uncommon.
         </p>
       </div>
     );
@@ -17,13 +19,13 @@ export default function DeclineStats({ stats }: { stats: DeclineStatsType }) {
 
   // Medium quality (longer wait) = costly to decline — amber
   // Low/very low quality (shorter wait, abundant supply) = lower risk — gray
-  const isCostlyToDecline = stats.median_wait_months >= 7;
-  const borderColor = isCostlyToDecline ? 'border-amber-200' : 'border-gray-200';
-  const bgColor = isCostlyToDecline ? 'bg-amber-50/50' : 'bg-gray-50';
-  const dividerColor = isCostlyToDecline ? 'border-amber-100' : 'border-gray-100';
-  const subtext = isCostlyToDecline
+  const isCostly = stats.median_wait_months >= 7;
+  const borderColor = isCostly ? 'border-amber-200' : 'border-gray-200';
+  const bgColor = isCostly ? 'bg-amber-50/50' : 'bg-gray-50';
+  const dividerColor = isCostly ? 'border-amber-100' : 'border-gray-100';
+  const subtext = isCostly
     ? 'Kidneys in this range have a meaningful wait — declining carries real cost.'
-    : 'Kidneys in this range are in abundant supply. Comparable alternatives are available.';
+    : 'Similar quality kidneys are frequently available. Declining has lower opportunity cost.';
 
   return (
     <div className={`rounded-xl border ${borderColor} ${bgColor} shadow-sm`}>

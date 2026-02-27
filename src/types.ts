@@ -11,12 +11,12 @@ export interface DonorInput {
   donor_hcv: boolean;
   donor_dcd: boolean;
 
-  // Additional factors (not in KDPI)
+  // Additional factors (not in KDPI) — null when the panel is collapsed
   donor_biopsy_glomerulosclerosis: number | null;
   donor_pump_resistance: number | null;
   donor_pump_flow: number | null;
   donor_on_dialysis: boolean;
-  cold_ischemia_hours: number;
+  cold_ischemia_hours: number | null;
   donor_bmi: number | null;
   donor_egfr: number | null;
   donor_terminal_creatinine: number | null;
@@ -45,14 +45,7 @@ export interface DeclineStats {
   pct_better_within_6mo: number;
   pct_still_waiting_12mo: number;
   high_demand: boolean;
-}
-
-export interface RecipientInput {
-  recipient_age: number | null;
-  recipient_dialysis_months: number | null;
-  recipient_bmi: number | null;
-  recipient_diabetes: boolean;
-  recipient_prior_transplant: boolean;
+  acceptance_rate: number | null; // set for high-demand kidneys
 }
 
 export interface PredictionResult {
@@ -66,4 +59,26 @@ export interface PredictionResult {
   shap_values: ShapValue[];
   similar_kidneys: SimilarKidney[];
   decline_stats: DeclineStats;
+}
+
+export interface RecipientInput {
+  recipient_age: number | null;
+  recipient_dialysis_months: number | null;
+  recipient_bmi: number | null;
+  recipient_diabetes: boolean;
+  recipient_prior_transplant: boolean;
+}
+
+/** Extends RecipientInput with a display-only label for the compare mode.
+ *  HIPAA: label is never persisted, logged, or transmitted. In-memory only. */
+export interface CandidateRecipient extends RecipientInput {
+  label: string;
+}
+
+export interface CandidateMatchResult {
+  candidate: CandidateRecipient;
+  prediction: PredictionResult;
+  match_score: number;
+  stars: number; // 1-5
+  recommendation_text: string;
 }
