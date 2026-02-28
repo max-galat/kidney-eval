@@ -1,6 +1,31 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { DonorInput, RecipientInput, CandidateRecipient } from '@/types';
+
+// ---------------------------------------------------------------------------
+// Unit conversions (metric ↔ imperial)
+// ---------------------------------------------------------------------------
+
+function cmToFtIn(cm: number): { ft: number; inches: number } {
+  const totalInches = cm / 2.54;
+  const ft = Math.floor(totalInches / 12);
+  let inches = Math.round(totalInches % 12);
+  if (inches === 12) return { ft: ft + 1, inches: 0 };
+  return { ft, inches };
+}
+
+function ftInToCm(ft: number, inches: number): number {
+  return Math.round((ft * 12 + inches) * 2.54);
+}
+
+function kgToLbs(kg: number): number {
+  return Math.round(kg * 2.205);
+}
+
+function lbsToKg(lbs: number): number {
+  return Math.round((lbs / 2.205) * 10) / 10;
+}
 
 // ---------------------------------------------------------------------------
 // Field primitives
@@ -91,6 +116,83 @@ function SelectField({
         ))}
       </select>
     </label>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Imperial height field (ft + in side by side in one grid cell)
+// ---------------------------------------------------------------------------
+
+function HeightImperialField({
+  ft,
+  inches,
+  onFtChange,
+  onInChange,
+  error,
+}: {
+  ft: number | null;
+  inches: number | null;
+  onFtChange: (v: number | null) => void;
+  onInChange: (v: number | null) => void;
+  error?: string;
+}) {
+  const inputCls = `w-full rounded-md border bg-white px-3 py-2 text-sm min-h-[44px] focus:ring-1 outline-none ${
+    error
+      ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+      : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+  }`;
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Height</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          value={ft ?? ''}
+          onChange={(e) => onFtChange(e.target.value === '' ? null : Number(e.target.value))}
+          placeholder="ft"
+          className={inputCls}
+        />
+        <span className="text-xs text-gray-400 whitespace-nowrap">ft</span>
+        <input
+          type="number"
+          value={inches ?? ''}
+          onChange={(e) => onInChange(e.target.value === '' ? null : Number(e.target.value))}
+          placeholder="in"
+          className={inputCls}
+        />
+        <span className="text-xs text-gray-400 whitespace-nowrap">in</span>
+      </div>
+      {error && <span className="text-xs text-red-500 mt-0.5">{error}</span>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// kg/cm | lbs/ft unit toggle
+// ---------------------------------------------------------------------------
+
+function UnitSystemToggle({
+  mode,
+  onSwitch,
+}: {
+  mode: 'metric' | 'imperial';
+  onSwitch: (m: 'metric' | 'imperial') => void;
+}) {
+  return (
+    <div className="inline-flex rounded-md border border-gray-200 bg-gray-100 p-0.5 text-xs font-medium shrink-0">
+      {(['metric', 'imperial'] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => onSwitch(m)}
+          className={`px-2.5 py-1 rounded transition-colors ${
+            mode === m ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          {m === 'metric' ? 'kg / cm' : 'lbs / ft'}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -350,7 +452,10 @@ interface Props {
   onSubmit: () => void;
 }
 
+// ---------------------------------------------------------------------------
 // Validation helpers
+// ---------------------------------------------------------------------------
+
 function validateAge(v: number | null): string {
   if (v === null || (v as unknown) === '') return 'Age is required';
   if (!Number.isInteger(v) || v < 0 || v > 90) return 'Age must be a whole number 0–90';
@@ -359,6 +464,13 @@ function validateAge(v: number | null): string {
 function validatePositive(v: number | null, label: string): string {
   if (v === null || (v as unknown) === '') return `${label} is required`;
   if (v <= 0) return `${label} must be a positive number`;
+  return '';
+}
+function validateImperialHeight(ft: number | null, inches: number | null): string {
+  if (ft === null) return 'Height (ft) is required';
+  if (!Number.isInteger(ft) || ft < 0 || ft > 7) return 'Feet must be 0–7';
+  if (inches === null) return 'Height (in) is required';
+  if (!Number.isInteger(inches) || inches < 0 || inches > 11) return 'Inches must be 0–11';
   return '';
 }
 
@@ -380,28 +492,97 @@ export default function DonorForm({
   const set = <K extends keyof DonorInput>(key: K) => (val: DonorInput[K]) =>
     onChange({ ...donor, [key]: val });
 
+  // ── Imperial/Metric unit state ─────────────────────────────────────────
+  const [unitMode, setUnitMode] = useState<'metric' | 'imperial'>('metric');
+  const [heightFt, setHeightFt] = useState<number | null>(null);
+  const [heightIn, setHeightIn] = useState<number | null>(null);
+  const [weightLbs, setWeightLbs] = useState<number | null>(null);
+
+  // Sync imperial display whenever donor metric values change externally (e.g. preset load)
+  useEffect(() => {
+    if (unitMode === 'imperial') {
+      const hCm = donor.donor_height_cm as unknown as number | null;
+      const wKg = donor.donor_weight_kg as unknown as number | null;
+      if (hCm && hCm > 0) {
+        const { ft, inches } = cmToFtIn(hCm);
+        setHeightFt(ft);
+        setHeightIn(inches);
+      } else {
+        setHeightFt(null);
+        setHeightIn(null);
+      }
+      if (wKg && wKg > 0) {
+        setWeightLbs(kgToLbs(wKg));
+      } else {
+        setWeightLbs(null);
+      }
+    }
+  }, [donor.donor_height_cm, donor.donor_weight_kg, unitMode]);
+
+  const handleSwitchUnit = (mode: 'metric' | 'imperial') => {
+    setUnitMode(mode);
+    // useEffect will handle conversion into imperial state when mode changes
+  };
+
+  const handleImperialFt = (ft: number | null) => {
+    setHeightFt(ft);
+    if (ft !== null) {
+      onChange({ ...donor, donor_height_cm: ftInToCm(ft, heightIn ?? 0) as unknown as number });
+    }
+  };
+
+  const handleImperialIn = (inches: number | null) => {
+    setHeightIn(inches);
+    if (inches !== null) {
+      onChange({ ...donor, donor_height_cm: ftInToCm(heightFt ?? 0, inches) as unknown as number });
+    }
+  };
+
+  const handleImperialWeight = (lbs: number | null) => {
+    setWeightLbs(lbs);
+    if (lbs !== null) {
+      onChange({ ...donor, donor_weight_kg: lbsToKg(lbs) as unknown as number });
+    }
+  };
+
+  // ── Validation ──────────────────────────────────────────────────────────
   const errors = {
     donor_age: validateAge(donor.donor_age as unknown as number | null),
-    donor_height_cm: validatePositive(donor.donor_height_cm as unknown as number | null, 'Height'),
-    donor_weight_kg: validatePositive(donor.donor_weight_kg as unknown as number | null, 'Weight'),
+    donor_height: unitMode === 'metric'
+      ? validatePositive(donor.donor_height_cm as unknown as number | null, 'Height')
+      : validateImperialHeight(heightFt, heightIn),
+    donor_weight: unitMode === 'metric'
+      ? validatePositive(donor.donor_weight_kg as unknown as number | null, 'Weight')
+      : validatePositive(weightLbs, 'Weight'),
     donor_serum_creatinine: validatePositive(donor.donor_serum_creatinine as unknown as number | null, 'Serum Creatinine'),
   };
   const isValid = Object.values(errors).every((e) => e === '');
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      {/* Section 1: KDPI Factors */}
-      <div className="border-b border-gray-100 px-6 py-4">
+      {/* Section 1: KDPI Factors — header with unit toggle */}
+      <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
           Donor Information
           <span className="ml-2 text-xs font-normal text-gray-400 normal-case">(KDPI factors)</span>
         </h2>
+        <UnitSystemToggle mode={unitMode} onSwitch={handleSwitchUnit} />
       </div>
-      {/* Single column on mobile, 2-col at sm, 3-col at md (Fix 1) */}
+      {/* Single column on mobile, 2-col at sm, 3-col at md */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 px-6 py-5">
         <NumberField label="Age" value={donor.donor_age as unknown as number | null} unit="yrs" onChange={set('donor_age') as (v: number | null) => void} error={errors.donor_age} />
-        <NumberField label="Height" value={donor.donor_height_cm as unknown as number | null} unit="cm" onChange={set('donor_height_cm') as (v: number | null) => void} error={errors.donor_height_cm} />
-        <NumberField label="Weight" value={donor.donor_weight_kg as unknown as number | null} unit="kg" onChange={set('donor_weight_kg') as (v: number | null) => void} error={errors.donor_weight_kg} />
+        {/* Height — metric or imperial */}
+        {unitMode === 'metric' ? (
+          <NumberField label="Height" value={donor.donor_height_cm as unknown as number | null} unit="cm" onChange={set('donor_height_cm') as (v: number | null) => void} error={errors.donor_height} />
+        ) : (
+          <HeightImperialField ft={heightFt} inches={heightIn} onFtChange={handleImperialFt} onInChange={handleImperialIn} error={errors.donor_height} />
+        )}
+        {/* Weight — metric or imperial */}
+        {unitMode === 'metric' ? (
+          <NumberField label="Weight" value={donor.donor_weight_kg as unknown as number | null} unit="kg" onChange={set('donor_weight_kg') as (v: number | null) => void} error={errors.donor_weight} />
+        ) : (
+          <NumberField label="Weight" value={weightLbs} unit="lbs" onChange={handleImperialWeight} error={errors.donor_weight} />
+        )}
         <SelectField label="Ethnicity" value={donor.donor_ethnicity} options={['White', 'Black', 'Hispanic', 'Asian', 'Other']} onChange={set('donor_ethnicity')} />
         <SelectField label="Cause of Death" value={donor.donor_cause_of_death} options={['CVA', 'Trauma', 'Anoxia', 'Other']} onChange={(v) => set('donor_cause_of_death')(v as DonorInput['donor_cause_of_death'])} />
         <NumberField label="Serum Creatinine" value={donor.donor_serum_creatinine as unknown as number | null} unit="mg/dL" onChange={set('donor_serum_creatinine') as (v: number | null) => void} error={errors.donor_serum_creatinine} />

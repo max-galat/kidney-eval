@@ -70,7 +70,7 @@ export const ADDITIONAL_FACTORS_CLEARED: Partial<DonorInput> = {
 export const PRESET_ALIGNED_CASE: DonorInput = {
   donor_age: 45,
   donor_height_cm: 175,
-  donor_weight_kg: 78,
+  donor_weight_kg: 80, // 175 cm / 80 kg = 5'9" / 176 lbs
   donor_ethnicity: 'White',
   donor_hypertension: false,
   donor_diabetes: false,
@@ -154,8 +154,8 @@ export const PRESET_DONT_TAKE_IT_RECIPIENT: RecipientInput = {
 /** Preset 3: "Model Says Don't Take It" — KDPI looks decent but pump/biopsy are terrible */
 export const PRESET_DONT_TAKE_IT: DonorInput = {
   donor_age: 42,
-  donor_height_cm: 175,
-  donor_weight_kg: 80,
+  donor_height_cm: 178, // 178 cm / 82 kg = 5'10" / 181 lbs
+  donor_weight_kg: 82,
   donor_ethnicity: 'White',
   donor_hypertension: false,
   donor_diabetes: false,
