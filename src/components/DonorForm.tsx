@@ -142,6 +142,12 @@ function CollapsibleSection({
 // Recipient fields (reused for single and per-candidate)
 // ---------------------------------------------------------------------------
 
+const PATIENT_GOALS = [
+  { value: 'dialysis-asap', label: 'Get off dialysis as soon as possible' },
+  { value: 'longevity', label: 'Maximize graft longevity' },
+  { value: 'balance', label: 'Balance both' },
+] as const;
+
 function RecipientFields({
   value,
   onChange,
@@ -155,15 +161,44 @@ function RecipientFields({
     onChange({ ...value, [key]: val });
 
   return (
-    <div className={compact ? 'space-y-3' : ''}>
+    <div className={compact ? 'space-y-3' : 'space-y-4'}>
       <div className={`grid grid-cols-2 ${compact ? 'md:grid-cols-3' : 'md:grid-cols-3'} gap-3`}>
         <NumberField label="Age" value={value.recipient_age} unit="yrs" onChange={set('recipient_age')} />
         <NumberField label="Time on Dialysis" value={value.recipient_dialysis_months} unit="mo" onChange={set('recipient_dialysis_months')} />
         <NumberField label="BMI" value={value.recipient_bmi} onChange={set('recipient_bmi')} />
       </div>
-      <div className="grid grid-cols-2 gap-3 mt-3">
+      <div className="grid grid-cols-2 gap-3">
         <Toggle label="Diabetes" value={value.recipient_diabetes} onChange={(v) => onChange({ ...value, recipient_diabetes: v })} />
         <Toggle label="Prior Transplant" value={value.recipient_prior_transplant} onChange={(v) => onChange({ ...value, recipient_prior_transplant: v })} />
+      </div>
+      {/* Patient goal selector */}
+      <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Patient&apos;s Transplant Goal</p>
+        <div className={`grid ${compact ? 'grid-cols-1' : 'grid-cols-3'} gap-2`}>
+          {PATIENT_GOALS.map((g) => (
+            <label
+              key={g.value}
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors text-xs ${
+                value.patient_goal === g.value
+                  ? 'border-blue-400 bg-blue-50 text-blue-800 font-medium'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              <input
+                type="radio"
+                name={`patient-goal-${compact ? 'compact' : 'full'}`}
+                value={g.value}
+                checked={value.patient_goal === g.value}
+                onChange={() => onChange({ ...value, patient_goal: g.value })}
+                className="sr-only"
+              />
+              <span className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${
+                value.patient_goal === g.value ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+              }`} />
+              {g.label}
+            </label>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -197,6 +232,7 @@ function CandidatesUI({
       recipient_bmi: null,
       recipient_diabetes: false,
       recipient_prior_transplant: false,
+      patient_goal: 'balance' as const,
     }]);
   };
 

@@ -60,10 +60,11 @@ export function SimilarKidneysTable({ kidneys }: { kidneys: SimilarKidney[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">
-              <th className="px-6 py-3">Age</th>
+              <th className="px-6 py-3">Donor Age</th>
               <th className="px-3 py-3">COD</th>
               <th className="px-3 py-3">DCD</th>
               <th className="px-3 py-3">Dialysis</th>
+              <th className="px-3 py-3">Recipient Age</th>
               <th className="px-3 py-3 sticky right-12 bg-white">1yr Status</th>
               <th className="px-3 py-3 sticky right-0 bg-white">eGFR</th>
             </tr>
@@ -75,6 +76,7 @@ export function SimilarKidneysTable({ kidneys }: { kidneys: SimilarKidney[] }) {
                 <td className="px-3 py-2.5">{k.cause_of_death}</td>
                 <td className="px-3 py-2.5">{k.dcd ? 'Yes' : 'No'}</td>
                 <td className="px-3 py-2.5">{k.on_dialysis ? 'Yes' : 'No'}</td>
+                <td className="px-3 py-2.5 text-gray-600">{k.recipient_age}</td>
                 <td className="px-3 py-2.5 sticky right-12 bg-white">
                   <Badge
                     label={k.graft_status_1yr}

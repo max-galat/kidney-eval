@@ -42,11 +42,12 @@ export const DEFAULT_RECIPIENT: RecipientInput = {
   recipient_bmi: null,
   recipient_diabetes: false,
   recipient_prior_transplant: false,
+  patient_goal: 'balance',
 };
 
 export const DEFAULT_CANDIDATES: CandidateRecipient[] = [
-  { label: '', recipient_age: null, recipient_dialysis_months: null, recipient_bmi: null, recipient_diabetes: false, recipient_prior_transplant: false },
-  { label: '', recipient_age: null, recipient_dialysis_months: null, recipient_bmi: null, recipient_diabetes: false, recipient_prior_transplant: false },
+  { label: '', recipient_age: null, recipient_dialysis_months: null, recipient_bmi: null, recipient_diabetes: false, recipient_prior_transplant: false, patient_goal: 'balance' },
+  { label: '', recipient_age: null, recipient_dialysis_months: null, recipient_bmi: null, recipient_diabetes: false, recipient_prior_transplant: false, patient_goal: 'balance' },
 ];
 
 // Fields that are cleared when the Additional Factors panel is collapsed
@@ -56,6 +57,97 @@ export const ADDITIONAL_FACTORS_CLEARED: Partial<DonorInput> = {
   donor_pump_flow: null,
   donor_on_dialysis: false,
   cold_ischemia_hours: null,
+  donor_bmi: null,
+  donor_egfr: null,
+  donor_terminal_creatinine: null,
+};
+
+// ---------------------------------------------------------------------------
+// Demo presets
+// ---------------------------------------------------------------------------
+
+/** Preset 1: Aligned case — model ≈ KDPI, good quality donor */
+export const PRESET_ALIGNED_CASE: DonorInput = {
+  donor_age: 45,
+  donor_height_cm: 175,
+  donor_weight_kg: 78,
+  donor_ethnicity: 'White',
+  donor_hypertension: false,
+  donor_diabetes: false,
+  donor_cause_of_death: 'Trauma',
+  donor_serum_creatinine: 0.9,
+  donor_hcv: false,
+  donor_dcd: false,
+  donor_biopsy_glomerulosclerosis: 5,
+  donor_pump_resistance: 0.12,
+  donor_pump_flow: 145,
+  donor_on_dialysis: false,
+  cold_ischemia_hours: 14,
+  donor_bmi: null,
+  donor_egfr: null,
+  donor_terminal_creatinine: null,
+};
+
+/** Preset 2: Kevin vs. James — compare mode with contrasting recipient profiles */
+export const PRESET_KEVIN_JAMES_DONOR: DonorInput = {
+  donor_age: 58,
+  donor_height_cm: 178,
+  donor_weight_kg: 82,
+  donor_ethnicity: 'White',
+  donor_hypertension: true,
+  donor_diabetes: false,
+  donor_cause_of_death: 'CVA',
+  donor_serum_creatinine: 1.4,
+  donor_hcv: false,
+  donor_dcd: false,
+  donor_biopsy_glomerulosclerosis: 8,
+  donor_pump_resistance: 0.18,
+  donor_pump_flow: 115,
+  donor_on_dialysis: false,
+  cold_ischemia_hours: 16,
+  donor_bmi: null,
+  donor_egfr: null,
+  donor_terminal_creatinine: null,
+};
+
+export const PRESET_KEVIN_JAMES_CANDIDATES: CandidateRecipient[] = [
+  {
+    label: 'Kevin',
+    recipient_age: 50,
+    recipient_dialysis_months: 7,
+    recipient_bmi: null,
+    recipient_diabetes: true,
+    recipient_prior_transplant: false,
+    patient_goal: 'dialysis-asap',
+  },
+  {
+    label: 'James',
+    recipient_age: 30,
+    recipient_dialysis_months: 0,
+    recipient_bmi: null,
+    recipient_diabetes: false,
+    recipient_prior_transplant: false,
+    patient_goal: 'balance',
+  },
+];
+
+/** Preset 3: "Model Says Don't Take It" — KDPI looks decent but pump/biopsy are terrible */
+export const PRESET_DONT_TAKE_IT: DonorInput = {
+  donor_age: 42,
+  donor_height_cm: 175,
+  donor_weight_kg: 80,
+  donor_ethnicity: 'White',
+  donor_hypertension: false,
+  donor_diabetes: false,
+  donor_cause_of_death: 'Other',
+  donor_serum_creatinine: 2.8,
+  donor_hcv: false,
+  donor_dcd: true,
+  donor_biopsy_glomerulosclerosis: 22,
+  donor_pump_resistance: 0.40,
+  donor_pump_flow: 60,
+  donor_on_dialysis: true,
+  cold_ischemia_hours: 28,
   donor_bmi: null,
   donor_egfr: null,
   donor_terminal_creatinine: null,
@@ -82,6 +174,93 @@ function kdpiToSurvival(kdpi: number): number {
     }
   }
   return 0.70;
+}
+
+// ---------------------------------------------------------------------------
+// Non-Use Risk (Change 1)
+// ---------------------------------------------------------------------------
+
+const NON_USE_ANCHORS: [number, number][] = [
+  [20, 5], [50, 18], [70, 30], [85, 48], [95, 68],
+];
+
+function interpolateNonUseRate(kdpi: number): number {
+  const clamped = Math.max(0, Math.min(100, kdpi));
+  if (clamped <= NON_USE_ANCHORS[0][0]) return NON_USE_ANCHORS[0][1];
+  for (let i = 1; i < NON_USE_ANCHORS.length; i++) {
+    const [k1, r1] = NON_USE_ANCHORS[i - 1];
+    const [k2, r2] = NON_USE_ANCHORS[i];
+    if (clamped <= k2) {
+      const t = (clamped - k1) / (k2 - k1);
+      return r1 + t * (r2 - r1);
+    }
+  }
+  return 68;
+}
+
+export function getNonUseRisk(
+  kdpi: number,
+  dcd: boolean,
+  donorAge: number,
+): { rate: number; label: string; color: 'green' | 'yellow' | 'orange' | 'red' } {
+  let rate = interpolateNonUseRate(kdpi);
+  if (dcd) rate += 8;
+  if (donorAge > 60) rate += 5;
+  rate = Math.min(80, Math.round(rate));
+
+  let label: string;
+  let color: 'green' | 'yellow' | 'orange' | 'red';
+  if (kdpi < 40) {
+    label = `Low discard risk: ~${rate}%`;
+    color = 'green';
+  } else if (kdpi < 70) {
+    label = `Moderate discard risk: ~${rate}%`;
+    color = 'yellow';
+  } else if (kdpi < 85) {
+    label = `High discard risk: ~${rate}%`;
+    color = 'orange';
+  } else {
+    label = `Very high discard risk: ~${rate}%`;
+    color = 'red';
+  }
+  return { rate, label, color };
+}
+
+// ---------------------------------------------------------------------------
+// Center Acceptance Context (Change 4)
+// ---------------------------------------------------------------------------
+
+export function getCenterAcceptanceData(
+  kdpi: number,
+  dcd: boolean,
+): { nationalRate: number; highVolumeRate: number; priorDeclines: number; kdpiLabel: string } {
+  let nationalRate: number;
+  let highVolumeRate: number;
+  let declineLow: number;
+  let declineHigh: number;
+  let kdpiLabel: string;
+
+  if (kdpi < 40) {
+    nationalRate = 85; highVolumeRate = 90; declineLow = 0; declineHigh = 1; kdpiLabel = '< 40';
+  } else if (kdpi < 70) {
+    nationalRate = 65; highVolumeRate = 72; declineLow = 2; declineHigh = 3; kdpiLabel = '40–70';
+  } else if (kdpi < 85) {
+    nationalRate = 38; highVolumeRate = 52; declineLow = 4; declineHigh = 8; kdpiLabel = '70–85';
+  } else {
+    nationalRate = 22; highVolumeRate = 35; declineLow = 8; declineHigh = 15; kdpiLabel = '85+';
+  }
+
+  if (dcd) {
+    nationalRate = Math.max(0, nationalRate - 10);
+    highVolumeRate = Math.max(0, highVolumeRate - 10);
+    declineLow += 3;
+    declineHigh += 3;
+  }
+
+  // Deterministic value within range based on KDPI
+  const range = declineHigh - declineLow;
+  const priorDeclines = declineLow + (range > 0 ? kdpi % (range + 1) : 0);
+  return { nationalRate, highVolumeRate, priorDeclines, kdpiLabel };
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +297,12 @@ function donorSeed(donor: DonorInput): number {
 const CAUSES_OF_DEATH = ['CVA', 'Anoxia', 'Trauma', 'Other'] as const;
 const FAILURE_CAUSES = ['Primary non-function', 'Rejection', 'Delayed graft function'] as const;
 
-function generateSimilarKidneys(donor: DonorInput, rand: () => number): SimilarKidney[] {
+function generateSimilarKidneys(
+  donor: DonorInput,
+  rand: () => number,
+  candidateAge?: number | null,
+): SimilarKidney[] {
+  const baseRecipientAge = candidateAge ?? 50;
   return Array.from({ length: 10 }, () => {
     const ageOffset = Math.round((rand() - 0.5) * 10);
     const age = Math.max(18, Math.min(90, donor.donor_age + ageOffset));
@@ -141,18 +325,82 @@ function generateSimilarKidneys(donor: DonorInput, rand: () => number): SimilarK
       ? FAILURE_CAUSES[Math.floor(rand() * 3)]
       : undefined;
 
-    return { donor_age: age, cause_of_death: cod, dcd, on_dialysis, kdpi, graft_status_1yr, egfr_12mo, failure_cause };
+    // Recipient age: candidate age ± randomInt(-10, +15), clamped 25–75
+    const recipientOffset = Math.round((rand() - 0.3) * 25);
+    const recipient_age = Math.max(25, Math.min(75, baseRecipientAge + recipientOffset));
+
+    return { donor_age: age, cause_of_death: cod, dcd, on_dialysis, kdpi, graft_status_1yr, egfr_12mo, failure_cause, recipient_age };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Personalized decline stats lookup (Change 3)
+// ---------------------------------------------------------------------------
+
+interface PersonalizedDeclineRow {
+  medianWait: number;
+  pctBetter6mo: number;
+  pctWaiting12mo: number;
+  annualMortality: number;
+}
+
+function getPersonalizedDeclineRow(recipient: RecipientInput): PersonalizedDeclineRow {
+  const age = recipient.recipient_age ?? 50;
+  const dialysis = recipient.recipient_dialysis_months ?? 0;
+  const diabetes = recipient.recipient_diabetes;
+  const priorTx = recipient.recipient_prior_transplant;
+
+  // Prior transplant overrides (highest priority)
+  if (priorTx) {
+    if (age < 50) return { medianWait: 22, pctBetter6mo: 8, pctWaiting12mo: 50, annualMortality: 10 };
+    if (age < 65) return { medianWait: 22, pctBetter6mo: 8, pctWaiting12mo: 50, annualMortality: 10 };
+    return { medianWait: 28, pctBetter6mo: 5, pctWaiting12mo: 60, annualMortality: 14 };
+  }
+
+  if (age < 35) {
+    if (diabetes) return { medianWait: 10, pctBetter6mo: 22, pctWaiting12mo: 22, annualMortality: 3 };
+    return { medianWait: 8, pctBetter6mo: 30, pctWaiting12mo: 15, annualMortality: 2 };
+  }
+  if (age < 50) {
+    if (diabetes) return { medianWait: 14, pctBetter6mo: 15, pctWaiting12mo: 32, annualMortality: 5 };
+    if (dialysis < 12) return { medianWait: 9, pctBetter6mo: 25, pctWaiting12mo: 18, annualMortality: 3 };
+    return { medianWait: 12, pctBetter6mo: 18, pctWaiting12mo: 28, annualMortality: 4 };
+  }
+  if (age < 65) {
+    if (diabetes) return { medianWait: 18, pctBetter6mo: 10, pctWaiting12mo: 42, annualMortality: 9 };
+    if (dialysis < 12) return { medianWait: 11, pctBetter6mo: 20, pctWaiting12mo: 25, annualMortality: 5 };
+    return { medianWait: 15, pctBetter6mo: 12, pctWaiting12mo: 35, annualMortality: 7 };
+  }
+  // age >= 65
+  if (diabetes) return { medianWait: 24, pctBetter6mo: 6, pctWaiting12mo: 55, annualMortality: 12 };
+  return { medianWait: 16, pctBetter6mo: 10, pctWaiting12mo: 40, annualMortality: 8 };
 }
 
 // ---------------------------------------------------------------------------
 // Dynamic decline stats
 // ---------------------------------------------------------------------------
 
-function generateDeclineStats(predicted: number, rand: () => number): DeclineStats {
+function generateDeclineStats(
+  predicted: number,
+  rand: () => number,
+  recipient?: RecipientInput | null,
+): DeclineStats {
+  // Use personalized lookup when recipient data is available
+  if (recipient && hasRecipientFactors(recipient)) {
+    const row = getPersonalizedDeclineRow(recipient);
+    return {
+      median_wait_months: row.medianWait,
+      pct_better_within_6mo: row.pctBetter6mo,
+      pct_still_waiting_12mo: row.pctWaiting12mo,
+      high_demand: false,
+      acceptance_rate: null,
+      annual_waitlist_mortality: row.annualMortality,
+    };
+  }
+
   if (predicted > 0.90) {
     const acceptance_rate = Math.min(97, Math.round(75 + (predicted - 0.90) * 180));
-    return { median_wait_months: 0, pct_better_within_6mo: 0, pct_still_waiting_12mo: 0, high_demand: true, acceptance_rate };
+    return { median_wait_months: 0, pct_better_within_6mo: 0, pct_still_waiting_12mo: 0, high_demand: true, acceptance_rate, annual_waitlist_mortality: null };
   }
   if (predicted > 0.80) {
     return {
@@ -161,6 +409,7 @@ function generateDeclineStats(predicted: number, rand: () => number): DeclineSta
       pct_still_waiting_12mo: Math.round(10 + rand() * 10),
       high_demand: false,
       acceptance_rate: null,
+      annual_waitlist_mortality: null,
     };
   }
   if (predicted > 0.70) {
@@ -170,6 +419,7 @@ function generateDeclineStats(predicted: number, rand: () => number): DeclineSta
       pct_still_waiting_12mo: Math.round(5 + rand() * 10),
       high_demand: false,
       acceptance_rate: null,
+      annual_waitlist_mortality: null,
     };
   }
   return {
@@ -178,6 +428,7 @@ function generateDeclineStats(predicted: number, rand: () => number): DeclineSta
     pct_still_waiting_12mo: Math.round(3 + rand() * 7),
     high_demand: false,
     acceptance_rate: null,
+    annual_waitlist_mortality: null,
   };
 }
 
@@ -286,8 +537,18 @@ function buildDynamicAnalysis(
     const f0 = nonKdpiNeg[0]?.label ?? 'additional risk factors';
     part2 = `Our model estimates ${diffPct}% higher survival than KDPI suggests, despite ${f0} — KDPI may overestimate risk for this donor profile.`;
   } else if (diffPct < -3) {
-    const f0 = nonKdpiNeg[0]?.label ?? 'factors KDPI does not penalize';
-    part2 = `Our model estimates ${Math.abs(diffPct)}% lower survival than KDPI suggests, driven by ${f0} which KDPI does not penalize.`;
+    const hasPumpIssues = nonKdpiNeg.some((s) => s.feature === 'donor_pump_flow' || s.feature === 'donor_pump_resistance');
+    const hasBiopsyIssues = nonKdpiNeg.some((s) => s.feature === 'donor_biopsy_glomerulosclerosis');
+    const features = nonKdpiNeg.slice(0, 2).map((s) => s.label);
+    if (features.length >= 2) {
+      part2 = `Our model estimates ${Math.abs(diffPct)}% lower survival than KDPI suggests, driven by ${features[0]} and ${features[1]} which KDPI does not penalize.`;
+    } else {
+      const f0 = features[0] ?? 'factors KDPI does not penalize';
+      part2 = `Our model estimates ${Math.abs(diffPct)}% lower survival than KDPI suggests, driven by ${f0} which KDPI does not penalize.`;
+    }
+    if (hasPumpIssues && hasBiopsyIssues) {
+      part2 += ' While KDPI suggests an above-average kidney, pump perfusion parameters and biopsy findings indicate significant tissue compromise not captured by KDPI. Consider cautiously.';
+    }
   } else {
     part2 = 'Our model and KDPI are broadly aligned on this donor.';
   }
@@ -335,7 +596,17 @@ function buildDynamicAnalysis(
     }
   }
 
-  return [part1, part2, part3, part4].filter(Boolean).join(' ');
+  // Part 5 — Patient goal modifier
+  let part5 = '';
+  if (recipient && hasRecipientFactors(recipient)) {
+    if (recipient.patient_goal === 'dialysis-asap' && predPct > 75) {
+      part5 = "Given this patient's goal of minimizing dialysis time, the survival benefit of this kidney likely outweighs the cost of waiting for a marginally better offer.";
+    } else if (recipient.patient_goal === 'longevity' && predPct < 82) {
+      part5 = "This patient is optimizing for long-term graft function. Consider whether waiting for a lower-KDPI kidney aligns with their timeline.";
+    }
+  }
+
+  return [part1, part2, part3, part4, part5].filter(Boolean).join(' ');
 }
 
 // ---------------------------------------------------------------------------
@@ -417,7 +688,12 @@ export function rankCandidates(donor: DonorInput, candidates: CandidateRecipient
       if (candidate.recipient_prior_transplant) comorbidityDelta -= 4;
       if (candidate.recipient_bmi !== null && candidate.recipient_bmi > 35) comorbidityDelta -= 2;
 
-      const match_score = predPct + ageAlignmentDelta + waitUrgencyDelta + comorbidityDelta;
+      // Patient goal adjustment (Change 2) — ±4 pts ≈ ±0.5 star tiers
+      let goalAdjust = 0;
+      if (candidate.patient_goal === 'dialysis-asap' && predPct > 75) goalAdjust = 4;
+      if (candidate.patient_goal === 'longevity' && predPct < 80) goalAdjust = -4;
+
+      const match_score = predPct + ageAlignmentDelta + waitUrgencyDelta + comorbidityDelta + goalAdjust;
       const stars = match_score >= 90 ? 5 : match_score >= 82 ? 4 : match_score >= 74 ? 3 : match_score >= 66 ? 2 : 1;
 
       const recommendation_text = buildCandidateRecommendationText({
@@ -471,7 +747,20 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
   const shapEntries: ShapValue[] = [
     { feature: 'donor_age', label: `Age (${donor.donor_age})`, value: donor.donor_age, impact: donor.donor_age > 60 ? -0.04 : 0.02 },
     { feature: 'donor_on_dialysis', label: 'Donor Dialysis', value: donor.donor_on_dialysis, impact: donor.donor_on_dialysis ? -0.03 : 0 },
-    { feature: 'donor_pump_flow', label: `Pump Flow (${donor.donor_pump_flow ?? 'N/A'} mL/min)`, value: donor.donor_pump_flow ?? 'N/A', impact: (donor.donor_pump_flow ?? 0) > 100 ? 0.02 : (donor.donor_pump_flow !== null ? -0.01 : 0) },
+    {
+      feature: 'donor_pump_flow',
+      label: `Pump Flow (${donor.donor_pump_flow ?? 'N/A'} mL/min)`,
+      value: donor.donor_pump_flow ?? 'N/A',
+      impact: donor.donor_pump_flow !== null
+        ? (donor.donor_pump_flow > 100 ? 0.02 : donor.donor_pump_flow < 80 ? -0.03 : -0.01)
+        : 0,
+    },
+    ...(donor.donor_pump_resistance !== null ? [{
+      feature: 'donor_pump_resistance',
+      label: `Pump Resistance (${donor.donor_pump_resistance} mmHg/mL/min)`,
+      value: `${donor.donor_pump_resistance} mmHg/mL/min`,
+      impact: donor.donor_pump_resistance > 0.30 ? -0.04 : donor.donor_pump_resistance > 0.20 ? -0.02 : -0.01,
+    }] : []),
     { feature: 'donor_biopsy_glomerulosclerosis', label: `Biopsy GS (${donor.donor_biopsy_glomerulosclerosis ?? 'N/A'}%)`, value: `${donor.donor_biopsy_glomerulosclerosis ?? 'N/A'}%`, impact: donor.donor_biopsy_glomerulosclerosis !== null ? ((donor.donor_biopsy_glomerulosclerosis < 15) ? 0.01 : -0.03) : 0 },
     ...(donor.cold_ischemia_hours !== null ? [{
       feature: 'cold_ischemia_hours', label: `Cold Ischemia (${donor.cold_ischemia_hours}h)`, value: `${donor.cold_ischemia_hours}h`, impact: donor.cold_ischemia_hours > 20 ? -0.02 : -0.01,
@@ -488,9 +777,10 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
   const totalImpact = sortedShap.reduce((sum, s) => sum + s.impact, 0);
   const basePredicted = Math.round((baseSurvival + totalImpact) * 100) / 100;
 
-  const similarKidneys = generateSimilarKidneys(donor, rand);
+  const candidateAge = recipient?.recipient_age ?? null;
+  const similarKidneys = generateSimilarKidneys(donor, rand, candidateAge);
   const predicted = applyRecipientAdjustment(basePredicted, recipient);
-  const declineStats = generateDeclineStats(predicted, rand);
+  const declineStats = generateDeclineStats(predicted, rand, recipient);
 
   // Combine donor + recipient SHAP so waterfall bars sum to finalPrediction.
   // Analysis text uses only donor SHAP (sortedShap) to keep Parts 1–3 donor-focused.
@@ -514,6 +804,13 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
   const confidence: 'basic' | 'enhanced' | 'personalized' =
     hasRecipientFactors(recipient) ? 'personalized' : hasAdditionalFactors(donor) ? 'enhanced' : 'basic';
 
+  // Confidence intervals (Change 8) — computed at end to preserve rand sequence
+  const modelCiExtra = Math.floor(rand() * 3); // 0, 1, or 2
+  const kdpiCiExtra = Math.floor(rand() * 3);
+  const isExtreme = mockKdpi > 90 || mockKdpi < 20;
+  const model_ci = isExtreme ? 6 : 3 + modelCiExtra;
+  const kdpi_ci = 5 + kdpiCiExtra;
+
   return {
     predicted_1yr_survival: predicted,
     kdpi_score: mockKdpi,
@@ -525,5 +822,9 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
     shap_values: allShapValues,
     similar_kidneys: similarKidneys,
     decline_stats: declineStats,
+    model_ci,
+    kdpi_ci,
+    donor_dcd: donor.donor_dcd,
+    donor_age: donor.donor_age,
   };
 }

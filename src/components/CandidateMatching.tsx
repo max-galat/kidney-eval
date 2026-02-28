@@ -1,13 +1,53 @@
 'use client';
 
+import { useState } from 'react';
 import { CandidateMatchResult } from '@/types';
+import { getNonUseRisk } from '@/data/mock';
+
+const STAR_JUSTIFICATION: Record<number, string> = {
+  5: 'Excellent match — strong alignment across survival, age matching, and dialysis benefit',
+  4: 'Strong match — donor age and recipient dialysis exposure suggest high net benefit',
+  3: 'Moderate match — younger recipient may benefit from waiting for lower-KDPI kidney',
+  2: 'Weak match — predicted graft lifespan underserves this recipient\'s life expectancy',
+  1: 'Poor match — significant concerns about graft quality relative to this recipient\'s needs',
+};
+
+const NON_USE_COLORS = {
+  green: { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  yellow: { badge: 'bg-yellow-50 text-yellow-700 border-yellow-200', dot: 'bg-yellow-500' },
+  orange: { badge: 'bg-orange-50 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
+  red: { badge: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' },
+};
 
 function Stars({ count }: { count: number }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
   return (
-    <span className="text-amber-400 tracking-tight">
-      {'★'.repeat(count)}
-      <span className="text-gray-200">{'★'.repeat(5 - count)}</span>
-    </span>
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-gray-500 font-medium">Donor-Recipient Match Quality</span>
+        <div
+          className="relative inline-block"
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
+          <span className="text-amber-400 tracking-tight cursor-help">
+            {'★'.repeat(count)}
+            <span className="text-gray-200">{'★'.repeat(5 - count)}</span>
+          </span>
+          {showTooltip && (
+            <div className="absolute z-20 bottom-full left-0 mb-2 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-xl text-xs text-gray-600 leading-relaxed">
+              Composite score based on predicted graft survival, recipient age-to-donor age matching,
+              dialysis time benefit, and EPTS-KDPI alignment. Higher = greater net transplant benefit
+              for this specific patient.
+            </div>
+          )}
+        </div>
+      </div>
+      {STAR_JUSTIFICATION[count] && (
+        <p className="text-xs text-gray-400 italic">{STAR_JUSTIFICATION[count]}</p>
+      )}
+    </div>
   );
 }
 
@@ -53,6 +93,9 @@ export default function CandidateMatching({ results, selectedIdx, onSelect }: Pr
           if (r.candidate.recipient_diabetes) detailParts.push('diabetic');
           if (r.candidate.recipient_prior_transplant) detailParts.push('prior tx');
 
+          const nonUse = getNonUseRisk(r.prediction.kdpi_score, r.prediction.donor_dcd, r.prediction.donor_age);
+          const nuCls = NON_USE_COLORS[nonUse.color];
+
           return (
             <div
               key={i}
@@ -79,21 +122,41 @@ export default function CandidateMatching({ results, selectedIdx, onSelect }: Pr
                     )}
                   </p>
 
-                  <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     <span className="text-sm text-gray-700">
-                      Predicted 1-yr survival: <span className="font-semibold">{predPct}%</span>
+                      Predicted 1-yr survival:{' '}
+                      <span className="font-semibold">{predPct}%</span>
+                      <span className="text-xs text-gray-400 ml-1">(±{r.prediction.model_ci}%)</span>
                     </span>
-                    <span className="text-sm">
-                      Match: <Stars count={r.stars} />
+                    {/* Non-use risk badge */}
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${nuCls.badge}`}>
+                      <span className={`w-1 h-1 rounded-full ${nuCls.dot}`} />
+                      {nonUse.label}
                     </span>
+                  </div>
+
+                  <div className="mt-2">
+                    <Stars count={r.stars} />
                   </div>
 
                   <p className="text-sm text-gray-600 mt-2 leading-relaxed">{r.recommendation_text}</p>
 
+                  {/* Personalized decline stats */}
                   <p className="text-xs text-gray-400 mt-2">
                     {decline_stats.high_demand
                       ? `Acceptance rate: ~${decline_stats.acceptance_rate ?? 90}% nationally. Declining is uncommon.`
-                      : `If declines: ${decline_stats.median_wait_months} mo median wait · ${decline_stats.pct_still_waiting_12mo}% still waiting at 12 mo`}
+                      : [
+                          `If declined: ${decline_stats.median_wait_months} mo median wait`,
+                          `${decline_stats.pct_still_waiting_12mo}% still waiting at 12 mo`,
+                          decline_stats.annual_waitlist_mortality !== null
+                            ? `${decline_stats.annual_waitlist_mortality}% annual mortality`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                    {decline_stats.annual_waitlist_mortality !== null && decline_stats.annual_waitlist_mortality > 8 && (
+                      <span className="ml-1 text-red-500 font-medium">↑ elevated</span>
+                    )}
                   </p>
                 </div>
               </div>

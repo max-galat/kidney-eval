@@ -38,6 +38,7 @@ export interface SimilarKidney {
   graft_status_1yr: 'Functioning' | 'Failed';
   egfr_12mo: number | null;
   failure_cause?: string;
+  recipient_age: number;
 }
 
 export interface DeclineStats {
@@ -46,6 +47,7 @@ export interface DeclineStats {
   pct_still_waiting_12mo: number;
   high_demand: boolean;
   acceptance_rate: number | null; // set for high-demand kidneys
+  annual_waitlist_mortality: number | null;
 }
 
 export interface PredictionResult {
@@ -59,6 +61,10 @@ export interface PredictionResult {
   shap_values: ShapValue[];
   similar_kidneys: SimilarKidney[];
   decline_stats: DeclineStats;
+  model_ci: number;
+  kdpi_ci: number;
+  donor_dcd: boolean;
+  donor_age: number;
 }
 
 export interface RecipientInput {
@@ -67,6 +73,7 @@ export interface RecipientInput {
   recipient_bmi: number | null;
   recipient_diabetes: boolean;
   recipient_prior_transplant: boolean;
+  patient_goal: 'dialysis-asap' | 'longevity' | 'balance';
 }
 
 /** Extends RecipientInput with a display-only label for the compare mode.
