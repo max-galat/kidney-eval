@@ -12,20 +12,23 @@ export default function SurvivalHero({ result }: { result: PredictionResult }) {
   const kdpiPct = Math.round(result.kdpi_implied_survival * 100);
   const s = colorForSurvival(modelPct);
   const k = colorForSurvival(kdpiPct);
+  const isBasic = result.prediction_confidence === 'basic';
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {/* Our model */}
-      <div className={`rounded-xl border-2 ${s.ring} ${s.bg} p-6 text-center`}>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Our Model</p>
-        <p className={`text-5xl font-bold ${s.text}`}>{modelPct}%</p>
-        <p className="text-sm text-gray-600 mt-1">1-Year Graft Survival</p>
-        <p className={`mt-2 inline-block rounded-full px-3 py-0.5 text-xs font-medium ${s.text} ${s.bg}`}>
-          {result.model_assessment}
-        </p>
-      </div>
+    <div className={`grid gap-4 ${isBasic ? 'grid-cols-1 max-w-sm mx-auto' : 'grid-cols-2'}`}>
+      {/* Our model — only shown when additional/recipient factors are present */}
+      {!isBasic && (
+        <div className={`rounded-xl border-2 ${s.ring} ${s.bg} p-6 text-center`}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Our Model</p>
+          <p className={`text-5xl font-bold ${s.text}`}>{modelPct}%</p>
+          <p className="text-sm text-gray-600 mt-1">1-Year Graft Survival</p>
+          <p className={`mt-2 inline-block rounded-full px-3 py-0.5 text-xs font-medium ${s.text} ${s.bg}`}>
+            {result.model_assessment}
+          </p>
+        </div>
+      )}
 
-      {/* KDPI — converted to same unit */}
+      {/* KDPI — always shown */}
       <div className={`rounded-xl border-2 ${k.ring} ${k.bg} p-6 text-center`}>
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">KDPI Estimate</p>
         <p className={`text-5xl font-bold ${k.text}`}>{kdpiPct}%</p>
