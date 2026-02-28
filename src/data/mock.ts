@@ -123,13 +123,33 @@ export const PRESET_KEVIN_JAMES_CANDIDATES: CandidateRecipient[] = [
   {
     label: 'James',
     recipient_age: 30,
-    recipient_dialysis_months: 0,
+    recipient_dialysis_months: 14,
     recipient_bmi: null,
     recipient_diabetes: false,
     recipient_prior_transplant: false,
-    patient_goal: 'balance',
+    patient_goal: 'longevity',
   },
 ];
+
+/** Preset 1 recipient — Aligned Case single-patient demo */
+export const PRESET_ALIGNED_CASE_RECIPIENT: RecipientInput = {
+  recipient_age: 55,
+  recipient_dialysis_months: 12,
+  recipient_bmi: 28,
+  recipient_diabetes: false,
+  recipient_prior_transplant: false,
+  patient_goal: 'balance',
+};
+
+/** Preset 3 recipient — "Model Says Don't Take It" demo */
+export const PRESET_DONT_TAKE_IT_RECIPIENT: RecipientInput = {
+  recipient_age: 58,
+  recipient_dialysis_months: 18,
+  recipient_bmi: 31,
+  recipient_diabetes: true,
+  recipient_prior_transplant: false,
+  patient_goal: 'dialysis-asap',
+};
 
 /** Preset 3: "Model Says Don't Take It" — KDPI looks decent but pump/biopsy are terrible */
 export const PRESET_DONT_TAKE_IT: DonorInput = {
@@ -211,16 +231,16 @@ export function getNonUseRisk(
   let label: string;
   let color: 'green' | 'yellow' | 'orange' | 'red';
   if (kdpi < 40) {
-    label = `Low discard risk: ~${rate}%`;
+    label = `Low non-use risk: ~${rate}%`;
     color = 'green';
   } else if (kdpi < 70) {
-    label = `Moderate discard risk: ~${rate}%`;
+    label = `Moderate non-use risk: ~${rate}%`;
     color = 'yellow';
   } else if (kdpi < 85) {
-    label = `High discard risk: ~${rate}%`;
+    label = `High non-use risk: ~${rate}%`;
     color = 'orange';
   } else {
-    label = `Very high discard risk: ~${rate}%`;
+    label = `Very high non-use risk: ~${rate}%`;
     color = 'red';
   }
   return { rate, label, color };
@@ -395,13 +415,12 @@ function generateDeclineStats(
       high_demand: false,
       acceptance_rate: null,
       annual_waitlist_mortality: row.annualMortality,
+      is_population_average_mortality: false,
     };
   }
 
-  if (predicted > 0.90) {
-    const acceptance_rate = Math.min(97, Math.round(75 + (predicted - 0.90) * 180));
-    return { median_wait_months: 0, pct_better_within_6mo: 0, pct_still_waiting_12mo: 0, high_demand: true, acceptance_rate, annual_waitlist_mortality: null };
-  }
+  // No recipient — always show population-average annual mortality (5%)
+  // The high-demand card is removed (Fix 5); show wait stats for all quality tiers
   if (predicted > 0.80) {
     return {
       median_wait_months: Math.round(8 + rand() * 6),
@@ -409,7 +428,8 @@ function generateDeclineStats(
       pct_still_waiting_12mo: Math.round(10 + rand() * 10),
       high_demand: false,
       acceptance_rate: null,
-      annual_waitlist_mortality: null,
+      annual_waitlist_mortality: 5,
+      is_population_average_mortality: true,
     };
   }
   if (predicted > 0.70) {
@@ -419,7 +439,8 @@ function generateDeclineStats(
       pct_still_waiting_12mo: Math.round(5 + rand() * 10),
       high_demand: false,
       acceptance_rate: null,
-      annual_waitlist_mortality: null,
+      annual_waitlist_mortality: 5,
+      is_population_average_mortality: true,
     };
   }
   return {
@@ -428,7 +449,8 @@ function generateDeclineStats(
     pct_still_waiting_12mo: Math.round(3 + rand() * 7),
     high_demand: false,
     acceptance_rate: null,
-    annual_waitlist_mortality: null,
+    annual_waitlist_mortality: 5,
+    is_population_average_mortality: true,
   };
 }
 
@@ -466,7 +488,9 @@ function applyRecipientAdjustment(predicted: number, recipient: RecipientInput |
   let delta = 0;
   if (r.recipient_age !== null) {
     if (r.recipient_age > 65) delta += 0.03;
-    else if (r.recipient_age < 40) delta -= 0.02;
+    else if (r.recipient_age >= 45 && r.recipient_age <= 60) delta -= 0.01; // middle-aged suboptimal
+    else if (r.recipient_age < 40 && !r.recipient_diabetes) delta += 0.01; // young non-diabetic is positive
+    else if (r.recipient_age < 40 && r.recipient_diabetes) delta -= 0.01; // young + diabetes
   }
   if (r.recipient_dialysis_months !== null && r.recipient_dialysis_months > 60) delta += 0.02;
   if (r.recipient_diabetes) delta -= 0.02;
@@ -584,15 +608,22 @@ function buildDynamicAnalysis(
     const recAge = recipient.recipient_age;
     const dialysis = recipient.recipient_dialysis_months;
     const dialysisClause = dialysis !== null && dialysis > 0 ? ` with ${dialysis} months on dialysis` : '';
+    const diabetesNote = recipient.recipient_diabetes
+      ? ' Diabetes modestly reduces expected graft survival but does not offset the transplant benefit for this donor quality.'
+      : '';
 
     if (recAge >= 65 && predPct >= 80) {
-      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this donor-recipient pairing is well-matched. Older recipients have demonstrated good tolerance for higher-KDPI kidneys, and the expected graft lifespan aligns with recipient life expectancy.`;
+      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this donor-recipient pairing is well-matched. Older recipients have demonstrated good tolerance for higher-KDPI kidneys, and the expected graft lifespan aligns with recipient life expectancy.${diabetesNote}`;
     } else if (recAge >= 65 && predPct < 80) {
-      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this is an age-appropriate but marginal pairing. The kidney may provide functional years, but post-transplant monitoring should be intensive.`;
+      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this is an age-appropriate but marginal pairing. The kidney may provide functional years, but post-transplant monitoring should be intensive.${diabetesNote}`;
+    } else if (recAge >= 50 && recAge < 65 && predPct >= 85) {
+      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this kidney offers a favorable survival-to-wait tradeoff based on age matching and accumulated dialysis exposure.${diabetesNote}`;
+    } else if (recAge >= 50 && recAge < 65) {
+      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this is a reasonable pairing. Consider the patient's time to next offer and waitlist trajectory when making the final decision.${diabetesNote}`;
     } else if (recAge < 50 && predPct >= 85) {
-      part4 = `For a ${recAge}-year-old recipient, this kidney should perform well in the medium term. However, younger recipients typically need longer graft longevity — monitor for early signs of chronic allograft nephropathy.`;
-    } else if (recAge < 50 && predPct < 85) {
-      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this kidney may underperform relative to what this patient could receive with additional wait time. Consider the patient's time-to-next-offer and waitlist trajectory.`;
+      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this kidney should perform well in the medium term. However, younger recipients typically need longer graft longevity — monitor for early signs of chronic allograft nephropathy.${diabetesNote}`;
+    } else if (recAge < 50) {
+      part4 = `For a ${recAge}-year-old recipient${dialysisClause}, this kidney may underperform relative to what this patient could receive with additional wait time. Consider the patient's time-to-next-offer and waitlist trajectory.${diabetesNote}`;
     }
   }
 
@@ -658,6 +689,41 @@ function buildCandidateRecommendationText(params: {
   return `Moderate match. Predicted survival is ${quality} for this recipient profile.`;
 }
 
+function buildStarJustification(params: {
+  stars: number;
+  ageAlignmentDelta: number;
+  agegap: number;
+  dialysis: number;
+  recipientAge: number | null;
+  diabetes: boolean;
+  predPct: number;
+}): string {
+  const { stars, ageAlignmentDelta, agegap, dialysis, recipientAge, diabetes, predPct } = params;
+
+  if (stars === 5 && ageAlignmentDelta > 0 && dialysis > 0) {
+    return `Excellent match — donor age aligns well with recipient life expectancy, and ${dialysis} months on dialysis adds urgency to transplant promptly.`;
+  }
+  if (stars === 5 && ageAlignmentDelta > 0) {
+    return 'Excellent match — strong age alignment and high predicted survival make this a compelling transplant opportunity.';
+  }
+  if (stars === 5) {
+    return 'Excellent match — strong alignment across survival, age matching, and dialysis benefit.';
+  }
+  if (stars === 4 && recipientAge !== null && recipientAge < 45 && agegap > 20) {
+    return "Strong match — but this recipient's younger age means a lower-KDPI kidney could provide longer graft life. Waiting carries low risk for this profile.";
+  }
+  if (stars === 4) {
+    return 'Strong match — donor age and recipient dialysis exposure suggest high net benefit.';
+  }
+  if (stars === 3) {
+    return "Moderate match — consider whether waiting for a better-matched kidney is feasible given this patient's waitlist position.";
+  }
+  if (stars === 2) {
+    return 'Weak match — predicted graft lifespan may underserve this recipient\'s life expectancy.';
+  }
+  return 'Poor match — significant concerns about graft quality relative to this recipient\'s needs.';
+}
+
 export function rankCandidates(donor: DonorInput, candidates: CandidateRecipient[]): CandidateMatchResult[] {
   return candidates
     .map((candidate) => {
@@ -666,12 +732,12 @@ export function rankCandidates(donor: DonorInput, candidates: CandidateRecipient
 
       // Age alignment
       let ageAlignmentDelta = 0;
+      const agegap = candidate.recipient_age !== null ? Math.abs(donor.donor_age - candidate.recipient_age) : 0;
       if (candidate.recipient_age !== null) {
-        const gap = Math.abs(donor.donor_age - candidate.recipient_age);
-        if (gap <= 5) ageAlignmentDelta += 8;
-        else if (gap <= 10) ageAlignmentDelta += 5;
-        if (gap > 20) ageAlignmentDelta -= 5;
-        if (gap > 30) ageAlignmentDelta -= 5;
+        if (agegap <= 5) ageAlignmentDelta += 8;
+        else if (agegap <= 10) ageAlignmentDelta += 5;
+        if (agegap > 20) ageAlignmentDelta -= 7; // larger penalty for mismatched donor-recipient age
+        if (agegap > 30) ageAlignmentDelta -= 5;
       }
 
       // Wait time urgency
@@ -705,7 +771,18 @@ export function rankCandidates(donor: DonorInput, candidates: CandidateRecipient
         priorTransplant: candidate.recipient_prior_transplant,
       });
 
-      return { candidate, prediction, match_score, stars, recommendation_text };
+      // Per-candidate star justification (Fix 18)
+      const star_justification = buildStarJustification({
+        stars,
+        ageAlignmentDelta,
+        agegap,
+        dialysis,
+        recipientAge: candidate.recipient_age,
+        diabetes: candidate.recipient_diabetes,
+        predPct,
+      });
+
+      return { candidate, prediction, match_score, stars, recommendation_text, star_justification };
     })
     .sort((a, b) => b.match_score - a.match_score);
 }
@@ -721,8 +798,12 @@ function buildRecipientShapEntries(recipient: RecipientInput | null | undefined)
   if (r.recipient_age !== null) {
     if (r.recipient_age > 65)
       entries.push({ feature: 'recipient_age', label: `Recipient Age (${r.recipient_age})`, value: r.recipient_age, impact: 0.03 });
-    else if (r.recipient_age < 40)
-      entries.push({ feature: 'recipient_age', label: `Recipient Age (${r.recipient_age})`, value: r.recipient_age, impact: -0.02 });
+    else if (r.recipient_age >= 45 && r.recipient_age <= 60)
+      entries.push({ feature: 'recipient_age', label: `Recipient Age (${r.recipient_age})`, value: r.recipient_age, impact: -0.01 });
+    else if (r.recipient_age < 40 && !r.recipient_diabetes)
+      entries.push({ feature: 'recipient_age', label: `Recipient Age (${r.recipient_age})`, value: r.recipient_age, impact: 0.01 });
+    else if (r.recipient_age < 40 && r.recipient_diabetes)
+      entries.push({ feature: 'recipient_age', label: `Recipient Age (${r.recipient_age})`, value: r.recipient_age, impact: -0.01 });
   }
   if (r.recipient_dialysis_months !== null && r.recipient_dialysis_months > 60)
     entries.push({ feature: 'recipient_dialysis_months', label: `Dialysis Duration (${r.recipient_dialysis_months}mo)`, value: r.recipient_dialysis_months, impact: 0.02 });

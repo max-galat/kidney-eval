@@ -6,22 +6,6 @@ interface Props {
 }
 
 export default function DeclineStats({ stats, patientGoal }: Props) {
-  // Excellent quality — show acceptance likelihood, hide wait stats
-  if (stats.high_demand) {
-    const rate = stats.acceptance_rate ?? 92;
-    return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 shadow-sm px-6 py-5">
-        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-1">
-          Acceptance Likelihood
-        </h2>
-        <p className="text-sm text-emerald-800">
-          Kidneys in this quality range have a <span className="font-semibold">{rate}%</span> national
-          acceptance rate. Declining is uncommon.
-        </p>
-      </div>
-    );
-  }
-
   // Medium quality (longer wait) = costly to decline — amber
   // Low/very low quality (shorter wait, abundant supply) = lower risk — gray
   const isCostly = stats.median_wait_months >= 7;
@@ -47,32 +31,46 @@ export default function DeclineStats({ stats, patientGoal }: Props) {
         )}
       </div>
 
-      <div className={`grid gap-4 px-6 py-5 ${stats.annual_waitlist_mortality !== null ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      {/* 2×2 grid on mobile, 4-col on sm+ (Fix 1) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 py-5">
         <div className="text-center">
           <p className="text-2xl font-bold text-gray-900">
             {stats.median_wait_months} <span className="text-base font-medium text-gray-500">mo</span>
           </p>
-          <p className="text-xs text-gray-500 mt-1">Median wait to next transplant</p>
+          <p className="text-xs text-gray-500 mt-1">Median wait</p>
         </div>
         <div className="text-center">
           <p className="text-2xl font-bold text-gray-900">{stats.pct_better_within_6mo}%</p>
-          <p className="text-xs text-gray-500 mt-1">Got a better kidney within 6 months</p>
+          <p className="text-xs text-gray-500 mt-1">P(better in 6mo)</p>
         </div>
         <div className="text-center">
           <p className="text-2xl font-bold text-gray-900">{stats.pct_still_waiting_12mo}%</p>
-          <p className="text-xs text-gray-500 mt-1">Still waiting at 12 months</p>
+          <p className="text-xs text-gray-500 mt-1">Still waiting 12mo</p>
         </div>
-        {stats.annual_waitlist_mortality !== null && (
-          <div className="text-center">
-            <p className={`text-2xl font-bold ${stats.annual_waitlist_mortality > 8 ? 'text-red-600' : 'text-gray-900'}`}>
-              {stats.annual_waitlist_mortality}%
-            </p>
-            <p className="text-xs text-gray-500 mt-1">Annual waitlist mortality for this profile</p>
-          </div>
-        )}
+        <div className="text-center">
+          {stats.annual_waitlist_mortality !== null ? (
+            <>
+              <p className={`text-2xl font-bold ${stats.annual_waitlist_mortality > 8 ? 'text-red-600' : 'text-gray-900'}`}>
+                {stats.annual_waitlist_mortality}%
+                {stats.is_population_average_mortality && <span className="text-base font-normal text-gray-400">*</span>}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Waitlist mortality</p>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-gray-900">~5%<span className="text-base font-normal text-gray-400">*</span></p>
+              <p className="text-xs text-gray-500 mt-1">Waitlist mortality</p>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className={`px-6 pb-4 border-t ${dividerColor} pt-3`}>
+      <div className={`px-6 pb-4 border-t ${dividerColor} pt-3 space-y-1`}>
+        {(stats.is_population_average_mortality || stats.annual_waitlist_mortality === null) && (
+          <p className="text-xs text-gray-400 italic">
+            * Population average (~5%). Enter recipient details for a personalized estimate.
+          </p>
+        )}
         <p className="text-xs text-gray-400 leading-relaxed">
           DonorNet predicts time to your next offer. This tool predicts graft outcome for this specific donor-recipient pair.
         </p>

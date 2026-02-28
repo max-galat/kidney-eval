@@ -2,6 +2,41 @@ import { ShapValue } from '@/types';
 
 const MAX_BAR_WIDTH = 160; // px
 
+/** Simplified vertical list — shown below 640px (Fix 2) */
+function MobileShapList({
+  shapValues,
+  basePrediction,
+  finalPrediction,
+}: {
+  shapValues: ShapValue[];
+  basePrediction: number;
+  finalPrediction: number;
+}) {
+  return (
+    <div className="px-4 py-4 space-y-2">
+      <div className="flex justify-between text-sm border-b border-gray-100 pb-2 mb-1">
+        <span className="text-gray-500 font-medium">Base prediction</span>
+        <span className="font-mono font-semibold text-gray-700">{Math.round(basePrediction * 100)}%</span>
+      </div>
+      {shapValues.map((s) => {
+        const isPositive = s.impact > 0;
+        return (
+          <div key={s.feature} className="flex items-start justify-between gap-2 text-sm py-0.5">
+            <span className="text-gray-600 text-xs leading-relaxed flex-1 min-w-0">{s.label}</span>
+            <span className={`font-mono text-xs font-semibold shrink-0 ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+              {isPositive ? '↑' : '↓'} {isPositive ? '+' : ''}{Math.round(s.impact * 100)}%
+            </span>
+          </div>
+        );
+      })}
+      <div className="flex justify-between text-sm border-t border-gray-200 pt-2 mt-1">
+        <span className="text-gray-900 font-semibold">Final prediction</span>
+        <span className="font-mono font-bold text-gray-900">{Math.round(finalPrediction * 100)}%</span>
+      </div>
+    </div>
+  );
+}
+
 export default function ShapWaterfall({
   shapValues,
   basePrediction,
@@ -22,10 +57,20 @@ export default function ShapWaterfall({
         <p className="text-xs text-gray-400 mt-0.5">SHAP feature importance — what pushed the score up or down</p>
       </div>
 
-      <div className="px-6 py-5 space-y-1">
+      {/* Mobile: simplified list (Fix 2) */}
+      <div className="sm:hidden">
+        <MobileShapList
+          shapValues={shapValues}
+          basePrediction={basePrediction}
+          finalPrediction={finalPrediction}
+        />
+      </div>
+
+      {/* Desktop: waterfall chart (Fix 11 — wider label column) */}
+      <div className="hidden sm:block px-6 py-5 space-y-1">
         {/* Base */}
         <div className="flex items-center gap-3 text-sm pb-2 border-b border-gray-100 mb-2">
-          <span className="w-44 text-gray-500 font-medium">Base prediction</span>
+          <span className="w-52 text-gray-500 font-medium shrink-0">Base prediction</span>
           <span className="font-mono font-semibold text-gray-700">{Math.round(basePrediction * 100)}%</span>
         </div>
 
@@ -37,9 +82,8 @@ export default function ShapWaterfall({
 
           return (
             <div key={s.feature} className="flex items-center gap-3 text-sm py-1">
-              <span className="w-44 text-gray-600 truncate" title={s.label}>
+              <span className="w-52 text-gray-600 truncate shrink-0" title={s.label}>
                 {s.label}
-                <span className="text-gray-400 ml-1 text-xs">({String(s.value)})</span>
               </span>
 
               <div className="flex-1 flex items-center gap-2">
@@ -68,7 +112,7 @@ export default function ShapWaterfall({
 
         {/* Final */}
         <div className="flex items-center gap-3 text-sm pt-2 border-t border-gray-200 mt-2">
-          <span className="w-44 text-gray-900 font-semibold">Final prediction</span>
+          <span className="w-52 text-gray-900 font-semibold shrink-0">Final prediction</span>
           <span className="font-mono font-bold text-gray-900 text-base">{Math.round(finalPrediction * 100)}%</span>
         </div>
       </div>

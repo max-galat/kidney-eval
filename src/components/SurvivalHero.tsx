@@ -64,7 +64,7 @@ export default function SurvivalHero({ result }: { result: PredictionResult }) {
         {/* Our model — only shown when additional/recipient factors are present */}
         {!isBasic && (
           <div className={`rounded-xl border-2 ${s.ring} ${s.bg} p-6 text-center`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Our Model</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Graft Survival Model</p>
             <p className={`text-5xl font-bold ${s.text}`}>{modelPct}%</p>
             <p className="text-sm text-gray-600 mt-1">1-Year Graft Survival</p>
             <p className={`mt-1 text-xs font-medium ${s.text}`}>
@@ -91,7 +91,7 @@ export default function SurvivalHero({ result }: { result: PredictionResult }) {
             <CIBar center={kdpiPct} halfWidth={result.kdpi_ci} />
           </div>
           <p className="mt-3 inline-block rounded-full px-3 py-0.5 text-xs font-medium text-gray-500 bg-gray-100">
-            KDPI {result.kdpi_score} percentile
+            KDPI {result.kdpi_score}
           </p>
         </div>
       </div>

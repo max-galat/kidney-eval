@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { CandidateMatchResult } from '@/types';
 import { getNonUseRisk } from '@/data/mock';
 
-const STAR_JUSTIFICATION: Record<number, string> = {
+// Fallback justifications by star count (used when dynamic justification is unavailable)
+const STAR_JUSTIFICATION_FALLBACK: Record<number, string> = {
   5: 'Excellent match — strong alignment across survival, age matching, and dialysis benefit',
   4: 'Strong match — donor age and recipient dialysis exposure suggest high net benefit',
-  3: 'Moderate match — younger recipient may benefit from waiting for lower-KDPI kidney',
+  3: 'Moderate match — consider whether waiting for a better-matched kidney is feasible',
   2: 'Weak match — predicted graft lifespan underserves this recipient\'s life expectancy',
   1: 'Poor match — significant concerns about graft quality relative to this recipient\'s needs',
 };
@@ -19,8 +20,9 @@ const NON_USE_COLORS = {
   red: { badge: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' },
 };
 
-function Stars({ count }: { count: number }) {
+function Stars({ count, justification }: { count: number; justification?: string }) {
   const [showTooltip, setShowTooltip] = useState(false);
+  const displayText = justification || STAR_JUSTIFICATION_FALLBACK[count];
 
   return (
     <div className="space-y-0.5">
@@ -44,8 +46,8 @@ function Stars({ count }: { count: number }) {
           )}
         </div>
       </div>
-      {STAR_JUSTIFICATION[count] && (
-        <p className="text-xs text-gray-400 italic">{STAR_JUSTIFICATION[count]}</p>
+      {displayText && (
+        <p className="text-xs text-gray-400 italic">{displayText}</p>
       )}
     </div>
   );
@@ -136,7 +138,7 @@ export default function CandidateMatching({ results, selectedIdx, onSelect }: Pr
                   </div>
 
                   <div className="mt-2">
-                    <Stars count={r.stars} />
+                    <Stars count={r.stars} justification={r.star_justification} />
                   </div>
 
                   <p className="text-sm text-gray-600 mt-2 leading-relaxed">{r.recommendation_text}</p>

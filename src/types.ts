@@ -48,6 +48,7 @@ export interface DeclineStats {
   high_demand: boolean;
   acceptance_rate: number | null; // set for high-demand kidneys
   annual_waitlist_mortality: number | null;
+  is_population_average_mortality?: boolean; // true when using 5% population default (no recipient entered)
 }
 
 export interface PredictionResult {
@@ -88,4 +89,5 @@ export interface CandidateMatchResult {
   match_score: number;
   stars: number; // 1-5
   recommendation_text: string;
+  star_justification: string; // per-candidate context explaining the star rating
 }

@@ -14,9 +14,11 @@ import {
   DEFAULT_CANDIDATES,
   ADDITIONAL_FACTORS_CLEARED,
   PRESET_ALIGNED_CASE,
+  PRESET_ALIGNED_CASE_RECIPIENT,
   PRESET_KEVIN_JAMES_DONOR,
   PRESET_KEVIN_JAMES_CANDIDATES,
   PRESET_DONT_TAKE_IT,
+  PRESET_DONT_TAKE_IT_RECIPIENT,
   getMockPrediction,
   rankCandidates,
   hasRecipientFactors,
@@ -106,7 +108,8 @@ function AboutModelModal({ onClose }: { onClose: () => void }) {
           <p>
             Validation: 5-fold cross-validation on held-out data with C-statistic of{' '}
             <span className="font-semibold">0.71</span> vs. KDPI&apos;s{' '}
-            <span className="font-semibold">0.63</span> for 1-year graft survival prediction.
+            <span className="font-semibold">0.63</span> for 1-year graft survival prediction{' '}
+            (discriminative ability; 1.0 = perfect, 0.5 = no better than chance).
           </p>
         </div>
         <p className="text-xs text-red-700 font-medium bg-red-50 border border-red-200 rounded-lg px-3 py-2 leading-relaxed">
@@ -175,8 +178,8 @@ export default function Home() {
     if (name === 'aligned') {
       setDonor(PRESET_ALIGNED_CASE);
       setAdditionalOpen(true);
-      setRecipientOpen(false);
-      setRecipient(DEFAULT_RECIPIENT);
+      setRecipientOpen(true);
+      setRecipient(PRESET_ALIGNED_CASE_RECIPIENT);
       setCandidates(DEFAULT_CANDIDATES);
       setRecipientMode('single');
     } else if (name === 'kevin-james') {
@@ -188,8 +191,8 @@ export default function Home() {
     } else if (name === 'dont-take-it') {
       setDonor(PRESET_DONT_TAKE_IT);
       setAdditionalOpen(true);
-      setRecipientOpen(false);
-      setRecipient(DEFAULT_RECIPIENT);
+      setRecipientOpen(true);
+      setRecipient(PRESET_DONT_TAKE_IT_RECIPIENT);
       setCandidates(DEFAULT_CANDIDATES);
       setRecipientMode('single');
     }
