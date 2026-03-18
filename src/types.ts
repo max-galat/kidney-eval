@@ -11,6 +11,21 @@ export interface DonorInput {
   donor_hcv: boolean;
   donor_dcd: boolean;
 
+  // Expanded demographics
+  donor_sex: 'male' | 'female' | null;
+  donor_hba1c: number | null;
+  donor_cigarette_use: 'none' | 'light' | 'heavy' | null;
+  donor_cigarette_ongoing: boolean;
+  donor_alcohol_use: 'none' | 'light' | 'heavy' | null;
+  donor_urine_output: 'normal' | 'reduced' | 'none' | null;
+  donor_ird: boolean;
+
+  // Organ assessment
+  donor_kidney_size_left: number | null;
+  donor_kidney_size_right: number | null;
+  donor_anatomy_notes: string;
+  donor_imaging: 'normal' | 'abnormal' | 'not-available' | null;
+
   // Additional factors (not in KDPI) — null when the panel is collapsed
   donor_biopsy_glomerulosclerosis: number | null;
   donor_pump_resistance: number | null;
@@ -20,6 +35,20 @@ export interface DonorInput {
   donor_bmi: number | null;
   donor_egfr: number | null;
   donor_terminal_creatinine: number | null;
+
+  // Creatinine trend
+  donor_admission_creatinine: number | null;
+  donor_peak_creatinine: number | null;
+
+  // Ischemia & logistics
+  warm_ischemic_time_min: number | null;
+  hemodynamic_stability: 'stable' | 'gradual-decline' | 'prolonged-hypotension' | 'unknown' | null;
+  additional_transport_hours: number | null;
+  time_to_or_hours: number | null;
+  second_pump_hours: number | null;
+
+  // Photo placeholder
+  kidney_photo: null;
 }
 
 export interface ShapValue {
@@ -66,6 +95,20 @@ export interface PredictionResult {
   kdpi_ci: number;
   donor_dcd: boolean;
   donor_age: number;
+
+  // PNF & creatinine predictions
+  pnf_risk: number;
+  pnf_ci: number;
+  creatinine_6mo: number;
+  creatinine_12mo: number;
+  creatinine_range: number;
+  creatinine_trend_label: string | null;
+
+  // Logistics
+  projected_total_cit: number | null;
+  effective_cit: number | null;
+  logistics_risk_text: string | null;
+  uses_projected_cit: boolean;
 }
 
 export interface RecipientInput {

@@ -19,6 +19,8 @@ import {
   PRESET_KEVIN_JAMES_CANDIDATES,
   PRESET_DONT_TAKE_IT,
   PRESET_DONT_TAKE_IT_RECIPIENT,
+  PRESET_WENG_NOTEBOOK,
+  PRESET_WENG_NOTEBOOK_RECIPIENT,
   getMockPrediction,
   rankCandidates,
   hasRecipientFactors,
@@ -30,6 +32,8 @@ import { SimilarKidneysSummary, SimilarKidneysTable } from '@/components/Similar
 import ShapWaterfall from '@/components/ShapWaterfall';
 import CandidateMatching from '@/components/CandidateMatching';
 import CenterAcceptanceCard from '@/components/CenterAcceptanceCard';
+import CreatinineCard from '@/components/CreatinineCard';
+import LogisticsOutput from '@/components/LogisticsOutput';
 
 // ---------------------------------------------------------------------------
 // Prediction badge
@@ -76,16 +80,17 @@ function AnalysisText({ text }: { text: string }) {
 // Demo preset tabs
 // ---------------------------------------------------------------------------
 
-type PresetName = 'aligned' | 'kevin-james' | 'dont-take-it';
+type PresetName = 'aligned' | 'kevin-james' | 'dont-take-it' | 'weng-notebook';
 
 const PRESETS: { name: PresetName; label: string; description: string }[] = [
   { name: 'aligned', label: 'Aligned Case', description: 'Model ≈ KDPI — good quality donor' },
   { name: 'kevin-james', label: 'Kevin vs. James', description: 'Compare candidates — contrasting waitlist risk' },
   { name: 'dont-take-it', label: "Model Says Don't Take It", description: 'KDPI looks decent; pump/biopsy tell a different story' },
+  { name: 'weng-notebook', label: "Weng's Notebook Case", description: 'All fields populated — complex donor profile' },
 ];
 
 // ---------------------------------------------------------------------------
-// About This Model modal
+// About This Model modal (Change 10 mod)
 // ---------------------------------------------------------------------------
 
 function AboutModelModal({ onClose }: { onClose: () => void }) {
@@ -111,6 +116,10 @@ function AboutModelModal({ onClose }: { onClose: () => void }) {
             <span className="font-semibold">0.63</span> for 1-year graft survival prediction{' '}
             (discriminative ability; 1.0 = perfect, 0.5 = no better than chance).
           </p>
+          <p>
+            Designed for training on SRTR/OPTN data (2015–2024, ~180K deceased donor kidney transplants).
+            Current prototype uses simulated data to demonstrate capability.
+          </p>
         </div>
         <p className="text-xs text-red-700 font-medium bg-red-50 border border-red-200 rounded-lg px-3 py-2 leading-relaxed">
           This is a research prototype, not a validated clinical tool. All predictions are
@@ -128,12 +137,52 @@ function AboutModelModal({ onClose }: { onClose: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
+// Default section open states
+// ---------------------------------------------------------------------------
+
+const DEFAULT_SECTIONS: Record<string, boolean> = {
+  medicalHistory: true,
+  kidneyFunction: false,
+  organAssessment: false,
+  ischemiaLogistics: false,
+  riskFlags: false,
+};
+
+// Sections to auto-expand when preset populates them
+function getSectionsForPreset(donor: DonorInput): Record<string, boolean> {
+  return {
+    medicalHistory: true,
+    kidneyFunction: !!(
+      donor.donor_admission_creatinine !== null ||
+      donor.donor_peak_creatinine !== null ||
+      donor.donor_egfr !== null ||
+      donor.donor_urine_output !== null ||
+      donor.donor_on_dialysis
+    ),
+    organAssessment: !!(
+      donor.donor_biopsy_glomerulosclerosis !== null ||
+      donor.donor_pump_resistance !== null ||
+      donor.donor_pump_flow !== null ||
+      donor.donor_kidney_size_left !== null ||
+      donor.donor_kidney_size_right !== null
+    ),
+    ischemiaLogistics: !!(
+      donor.cold_ischemia_hours !== null ||
+      donor.warm_ischemic_time_min !== null ||
+      donor.additional_transport_hours !== null
+    ),
+    riskFlags: !!(donor.donor_ird || donor.donor_dcd),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Home
 // ---------------------------------------------------------------------------
 
 export default function Home() {
   const [donor, setDonor] = useState<DonorInput>(DEFAULT_DONOR);
   const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>(DEFAULT_SECTIONS);
 
   const [recipient, setRecipient] = useState<RecipientInput>(DEFAULT_RECIPIENT);
   const [recipientOpen, setRecipientOpen] = useState(false);
@@ -147,27 +196,24 @@ export default function Home() {
   const [activePreset, setActivePreset] = useState<PresetName | null>(null);
   const [showAbout, setShowAbout] = useState(false);
 
-  // ── Toggle handlers — clear fields on collapse ─────────────────────────
-
+  // Toggle handlers
   const handleAdditionalToggle = () => {
     const opening = !additionalOpen;
     setAdditionalOpen(opening);
-    if (!opening) {
-      setDonor((prev) => ({ ...prev, ...ADDITIONAL_FACTORS_CLEARED }));
-    }
+    if (!opening) setDonor((prev) => ({ ...prev, ...ADDITIONAL_FACTORS_CLEARED }));
   };
 
   const handleRecipientToggle = () => {
     const opening = !recipientOpen;
     setRecipientOpen(opening);
-    if (!opening) {
-      setRecipient(DEFAULT_RECIPIENT);
-      setCandidates(DEFAULT_CANDIDATES);
-    }
+    if (!opening) { setRecipient(DEFAULT_RECIPIENT); setCandidates(DEFAULT_CANDIDATES); }
   };
 
-  // ── Preset loader ───────────────────────────────────────────────────────
+  const handleSectionToggle = (section: string) => {
+    setSectionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
 
+  // Preset loader
   const loadPreset = (name: PresetName) => {
     setActivePreset(name);
     setResult(null);
@@ -182,12 +228,14 @@ export default function Home() {
       setRecipient(PRESET_ALIGNED_CASE_RECIPIENT);
       setCandidates(DEFAULT_CANDIDATES);
       setRecipientMode('single');
+      setSectionOpen(getSectionsForPreset(PRESET_ALIGNED_CASE));
     } else if (name === 'kevin-james') {
       setDonor(PRESET_KEVIN_JAMES_DONOR);
       setAdditionalOpen(true);
       setRecipientOpen(true);
       setRecipientMode('compare');
       setCandidates(PRESET_KEVIN_JAMES_CANDIDATES);
+      setSectionOpen(getSectionsForPreset(PRESET_KEVIN_JAMES_DONOR));
     } else if (name === 'dont-take-it') {
       setDonor(PRESET_DONT_TAKE_IT);
       setAdditionalOpen(true);
@@ -195,11 +243,19 @@ export default function Home() {
       setRecipient(PRESET_DONT_TAKE_IT_RECIPIENT);
       setCandidates(DEFAULT_CANDIDATES);
       setRecipientMode('single');
+      setSectionOpen(getSectionsForPreset(PRESET_DONT_TAKE_IT));
+    } else if (name === 'weng-notebook') {
+      setDonor(PRESET_WENG_NOTEBOOK);
+      setAdditionalOpen(true);
+      setRecipientOpen(true);
+      setRecipient(PRESET_WENG_NOTEBOOK_RECIPIENT);
+      setCandidates(DEFAULT_CANDIDATES);
+      setRecipientMode('single');
+      setSectionOpen(getSectionsForPreset(PRESET_WENG_NOTEBOOK));
     }
   };
 
-  // ── Evaluate ───────────────────────────────────────────────────────────
-
+  // Evaluate
   const handleEvaluate = () => {
     const newEvalId = evalId + 1;
     setEvalId(newEvalId);
@@ -226,7 +282,6 @@ export default function Home() {
 
   const isCompareMode = recipientOpen && recipientMode === 'compare' && candidateResults.length > 0;
 
-  // Active patient goal for decline card
   const activePatientGoal = isCompareMode
     ? candidateResults[selectedCandidateIdx]?.candidate.patient_goal
     : recipientOpen && recipientMode === 'single'
@@ -267,7 +322,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Form (sections 1–3 + submit) */}
+      {/* Form */}
       <DonorForm
         donor={donor}
         onChange={setDonor}
@@ -282,49 +337,66 @@ export default function Home() {
         candidates={candidates}
         onCandidatesChange={setCandidates}
         onSubmit={handleEvaluate}
+        sectionOpen={sectionOpen}
+        onSectionToggle={handleSectionToggle}
       />
 
-      {/* Results — key={evalId} forces re-animation on every evaluate click */}
+      {/* Results — reorganized per spec (Change 5 mod: lead w/ quality) */}
       {result && (
         <div key={evalId} className="mt-8 space-y-6 animate-in fade-in duration-300">
 
-          {/* 5. Prediction badge */}
+          {/* 1. Prediction badge */}
           <div className="flex items-center gap-2">
             <PredictionBadge confidence={result.prediction_confidence} />
           </div>
 
-          {/* 6a. Candidate Matching (compare mode) */}
-          {isCompareMode && (
+          {/* 2. Candidate Matching (compare) OR Headline 2x2 grid (single) */}
+          {isCompareMode ? (
             <CandidateMatching
               results={candidateResults}
               selectedIdx={selectedCandidateIdx}
               onSelect={handleSelectCandidate}
             />
+          ) : (
+            <SurvivalHero result={result} />
           )}
 
-          {/* 6b. Prediction cards (single/no-recipient mode) */}
-          {!isCompareMode && <SurvivalHero result={result} />}
+          {/* 3. Predicted Kidney Function */}
+          <CreatinineCard
+            cr6mo={result.creatinine_6mo}
+            cr12mo={result.creatinine_12mo}
+            range={result.creatinine_range}
+            trendLabel={result.creatinine_trend_label}
+          />
 
-          {/* 7. Analysis text */}
+          {/* 4. Transport Assessment (if logistics populated) */}
+          {result.projected_total_cit !== null && result.logistics_risk_text !== null && (
+            <LogisticsOutput
+              projectedCIT={result.projected_total_cit}
+              effectiveCIT={result.effective_cit}
+              riskText={result.logistics_risk_text}
+              usesProjected={result.uses_projected_cit}
+            />
+          )}
+
+          {/* 5. Analysis text */}
           <AnalysisText text={result.divergence_explanation} />
 
-          {/* 8. Should You Wait? */}
+          {/* 6. Should You Wait? (mortality hero — Change 3 mod) */}
           <DeclineStats stats={result.decline_stats} patientGoal={activePatientGoal} />
 
-          {/* 9. Similar kidneys summary */}
-          <SimilarKidneysSummary kidneys={result.similar_kidneys} />
-
-          {/* 10. SHAP waterfall */}
+          {/* 7. SHAP waterfall */}
           <ShapWaterfall
             shapValues={result.shap_values}
             basePrediction={0.92}
             finalPrediction={result.predicted_1yr_survival}
           />
 
-          {/* 11. Center acceptance context card */}
+          {/* 8. Center acceptance */}
           <CenterAcceptanceCard kdpi={result.kdpi_score} dcd={result.donor_dcd} />
 
-          {/* 12. Similar kidneys detail table */}
+          {/* 9. Similar kidneys */}
+          <SimilarKidneysSummary kidneys={result.similar_kidneys} />
           <SimilarKidneysTable kidneys={result.similar_kidneys} />
         </div>
       )}

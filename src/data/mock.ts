@@ -13,6 +13,36 @@ import {
 // Defaults
 // ---------------------------------------------------------------------------
 
+// Helper: default values for all new expanded fields
+const NEW_FIELDS_DEFAULTS: Pick<DonorInput,
+  'donor_sex' | 'donor_hba1c' | 'donor_cigarette_use' | 'donor_cigarette_ongoing' |
+  'donor_alcohol_use' | 'donor_urine_output' | 'donor_ird' | 'donor_kidney_size_left' |
+  'donor_kidney_size_right' | 'donor_anatomy_notes' | 'donor_imaging' |
+  'donor_admission_creatinine' | 'donor_peak_creatinine' | 'warm_ischemic_time_min' |
+  'hemodynamic_stability' | 'additional_transport_hours' | 'time_to_or_hours' |
+  'second_pump_hours' | 'kidney_photo'
+> = {
+  donor_sex: null,
+  donor_hba1c: null,
+  donor_cigarette_use: null,
+  donor_cigarette_ongoing: false,
+  donor_alcohol_use: null,
+  donor_urine_output: null,
+  donor_ird: false,
+  donor_kidney_size_left: null,
+  donor_kidney_size_right: null,
+  donor_anatomy_notes: '',
+  donor_imaging: null,
+  donor_admission_creatinine: null,
+  donor_peak_creatinine: null,
+  warm_ischemic_time_min: null,
+  hemodynamic_stability: null,
+  additional_transport_hours: null,
+  time_to_or_hours: null,
+  second_pump_hours: null,
+  kidney_photo: null,
+};
+
 export const DEFAULT_DONOR: DonorInput = {
   // KDPI factors
   donor_age: 65,
@@ -25,6 +55,7 @@ export const DEFAULT_DONOR: DonorInput = {
   donor_serum_creatinine: 1.2,
   donor_hcv: false,
   donor_dcd: true,
+  ...NEW_FIELDS_DEFAULTS,
   // Additional factors — null by default (cleared when panel is collapsed)
   donor_biopsy_glomerulosclerosis: null,
   donor_pump_resistance: null,
@@ -60,6 +91,13 @@ export const ADDITIONAL_FACTORS_CLEARED: Partial<DonorInput> = {
   donor_bmi: null,
   donor_egfr: null,
   donor_terminal_creatinine: null,
+  donor_admission_creatinine: null,
+  donor_peak_creatinine: null,
+  warm_ischemic_time_min: null,
+  hemodynamic_stability: null,
+  additional_transport_hours: null,
+  time_to_or_hours: null,
+  second_pump_hours: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -70,7 +108,7 @@ export const ADDITIONAL_FACTORS_CLEARED: Partial<DonorInput> = {
 export const PRESET_ALIGNED_CASE: DonorInput = {
   donor_age: 45,
   donor_height_cm: 175,
-  donor_weight_kg: 80, // 175 cm / 80 kg = 5'9" / 176 lbs
+  donor_weight_kg: 80,
   donor_ethnicity: 'White',
   donor_hypertension: false,
   donor_diabetes: false,
@@ -78,6 +116,17 @@ export const PRESET_ALIGNED_CASE: DonorInput = {
   donor_serum_creatinine: 0.9,
   donor_hcv: false,
   donor_dcd: false,
+  ...NEW_FIELDS_DEFAULTS,
+  donor_sex: 'male',
+  donor_hba1c: 5.2,
+  donor_cigarette_use: 'none',
+  donor_alcohol_use: 'light',
+  donor_urine_output: 'normal',
+  donor_imaging: 'normal',
+  donor_admission_creatinine: 0.8,
+  donor_peak_creatinine: 1.1,
+  donor_kidney_size_left: 11,
+  donor_kidney_size_right: 11.5,
   donor_biopsy_glomerulosclerosis: 5,
   donor_pump_resistance: 0.12,
   donor_pump_flow: 145,
@@ -100,6 +149,17 @@ export const PRESET_KEVIN_JAMES_DONOR: DonorInput = {
   donor_serum_creatinine: 1.4,
   donor_hcv: false,
   donor_dcd: false,
+  ...NEW_FIELDS_DEFAULTS,
+  donor_sex: 'male',
+  donor_hba1c: 7.2,
+  donor_cigarette_use: 'light',
+  donor_alcohol_use: 'heavy',
+  donor_urine_output: 'normal',
+  donor_imaging: 'normal',
+  donor_admission_creatinine: 1.0,
+  donor_peak_creatinine: 1.6,
+  donor_kidney_size_left: 12,
+  donor_kidney_size_right: 12,
   donor_biopsy_glomerulosclerosis: 8,
   donor_pump_resistance: 0.18,
   donor_pump_flow: 115,
@@ -154,7 +214,7 @@ export const PRESET_DONT_TAKE_IT_RECIPIENT: RecipientInput = {
 /** Preset 3: "Model Says Don't Take It" — KDPI looks decent but pump/biopsy are terrible */
 export const PRESET_DONT_TAKE_IT: DonorInput = {
   donor_age: 42,
-  donor_height_cm: 178, // 178 cm / 82 kg = 5'10" / 181 lbs
+  donor_height_cm: 178,
   donor_weight_kg: 82,
   donor_ethnicity: 'White',
   donor_hypertension: false,
@@ -163,6 +223,19 @@ export const PRESET_DONT_TAKE_IT: DonorInput = {
   donor_serum_creatinine: 2.8,
   donor_hcv: false,
   donor_dcd: true,
+  ...NEW_FIELDS_DEFAULTS,
+  donor_sex: 'male',
+  donor_hba1c: 5.8,
+  donor_cigarette_use: 'none',
+  donor_alcohol_use: 'none',
+  donor_urine_output: 'reduced',
+  donor_imaging: 'abnormal',
+  donor_admission_creatinine: 1.2,
+  donor_peak_creatinine: 3.2,
+  donor_kidney_size_left: 10,
+  donor_kidney_size_right: 10.5,
+  warm_ischemic_time_min: 75,
+  hemodynamic_stability: 'prolonged-hypotension',
   donor_biopsy_glomerulosclerosis: 22,
   donor_pump_resistance: 0.40,
   donor_pump_flow: 60,
@@ -171,6 +244,56 @@ export const PRESET_DONT_TAKE_IT: DonorInput = {
   donor_bmi: null,
   donor_egfr: null,
   donor_terminal_creatinine: null,
+};
+
+/** Preset 4: Weng's Notebook Case — all fields populated */
+export const PRESET_WENG_NOTEBOOK: DonorInput = {
+  donor_age: 48,
+  donor_height_cm: 188,
+  donor_weight_kg: 150.6,
+  donor_ethnicity: 'White',
+  donor_hypertension: true,
+  donor_diabetes: false,
+  donor_cause_of_death: 'Anoxia',
+  donor_serum_creatinine: 3.5,
+  donor_hcv: false,
+  donor_dcd: false,
+  donor_sex: 'male',
+  donor_hba1c: 6.4,
+  donor_cigarette_use: 'heavy',
+  donor_cigarette_ongoing: false,
+  donor_alcohol_use: 'heavy',
+  donor_urine_output: 'none',
+  donor_ird: true,
+  donor_kidney_size_left: 13,
+  donor_kidney_size_right: 14,
+  donor_anatomy_notes: '',
+  donor_imaging: 'normal',
+  donor_admission_creatinine: 1.6,
+  donor_peak_creatinine: 5.5,
+  donor_biopsy_glomerulosclerosis: 18,
+  donor_pump_resistance: 0.45,
+  donor_pump_flow: 55,
+  donor_on_dialysis: true,
+  cold_ischemia_hours: 12,
+  donor_bmi: null,
+  donor_egfr: null,
+  donor_terminal_creatinine: null,
+  warm_ischemic_time_min: null,
+  hemodynamic_stability: null,
+  additional_transport_hours: null,
+  time_to_or_hours: null,
+  second_pump_hours: null,
+  kidney_photo: null,
+};
+
+export const PRESET_WENG_NOTEBOOK_RECIPIENT: RecipientInput = {
+  recipient_age: 52,
+  recipient_dialysis_months: 10,
+  recipient_bmi: 29,
+  recipient_diabetes: false,
+  recipient_prior_transplant: false,
+  patient_goal: 'balance',
 };
 
 // ---------------------------------------------------------------------------
@@ -817,6 +940,164 @@ function buildRecipientShapEntries(recipient: RecipientInput | null | undefined)
 }
 
 // ---------------------------------------------------------------------------
+// PNF Risk Calculation (Feature B)
+// ---------------------------------------------------------------------------
+
+function calculatePNF(donor: DonorInput, rand: () => number): { risk: number; ci: number } {
+  let pnf = 3.5; // base %
+
+  // Additive modifiers
+  if (donor.donor_dcd) pnf += 2;
+  if (donor.warm_ischemic_time_min !== null) {
+    if (donor.warm_ischemic_time_min > 90) pnf += 5;
+    else if (donor.warm_ischemic_time_min > 60) pnf += 3;
+  }
+  if (donor.cold_ischemia_hours !== null) {
+    if (donor.cold_ischemia_hours > 36) pnf += 3;
+    else if (donor.cold_ischemia_hours > 24) pnf += 1.5;
+  }
+  if (donor.donor_on_dialysis) pnf += 1;
+  if (donor.donor_serum_creatinine > 2.0) pnf += 1.5;
+  if (donor.donor_age > 60) pnf += 1;
+  if (donor.donor_biopsy_glomerulosclerosis !== null && donor.donor_biopsy_glomerulosclerosis > 15) pnf += 1.5;
+  if (donor.donor_pump_resistance !== null && donor.donor_pump_resistance > 0.3) pnf += 1;
+  if (donor.hemodynamic_stability === 'prolonged-hypotension') pnf += 2;
+
+  // Reductive modifiers
+  if (donor.donor_age < 35) pnf -= 1;
+  if (donor.donor_pump_flow !== null && donor.donor_pump_flow > 120) pnf -= 0.5;
+  if (donor.donor_biopsy_glomerulosclerosis !== null && donor.donor_biopsy_glomerulosclerosis < 5) pnf -= 0.5;
+
+  pnf = Math.max(0.5, Math.min(25, pnf));
+  const ci = 1.5 + rand();
+
+  return { risk: Math.round(pnf * 10) / 10, ci: Math.round(ci * 10) / 10 };
+}
+
+// ---------------------------------------------------------------------------
+// Creatinine Prediction (Feature C)
+// ---------------------------------------------------------------------------
+
+function calculateCreatinine(
+  donor: DonorInput,
+  rand: () => number,
+): { cr6mo: number; cr12mo: number; range: number; trendLabel: string | null } {
+  let base6mo = 1.2;
+
+  // KDPI-based modifiers
+  const mockKdpi = Math.min(99, Math.max(1, Math.round(
+    40 + (donor.donor_age - 30) * 0.8
+    + (donor.donor_hypertension ? 8 : 0)
+    + (donor.donor_diabetes ? 10 : 0)
+    + (donor.donor_dcd ? 10 : 0)
+    + (donor.donor_hcv ? 15 : 0)
+    + (donor.donor_serum_creatinine > 1.5 ? 5 : 0)
+  )));
+
+  if (mockKdpi > 85) base6mo += 0.4;
+  else if (mockKdpi >= 70) base6mo += 0.2;
+
+  if (donor.donor_dcd) base6mo += 0.2;
+  if (donor.donor_age > 60) base6mo += 0.2;
+  if (donor.donor_on_dialysis) base6mo += 0.15;
+  if (donor.donor_serum_creatinine > 2.0) base6mo += 0.2;
+  if (donor.donor_biopsy_glomerulosclerosis !== null && donor.donor_biopsy_glomerulosclerosis > 15) base6mo += 0.15;
+
+  const cr6mo = Math.max(0.8, Math.min(4.0, Math.round(base6mo * 10) / 10));
+  const cr12mo = Math.max(0.8, Math.min(4.0, Math.round((cr6mo + 0.1) * 10) / 10));
+  const range = Math.round((0.3 + rand() * 0.2) * 10) / 10;
+
+  // Creatinine trend label
+  let trendLabel: string | null = null;
+  if (donor.donor_admission_creatinine !== null && donor.donor_peak_creatinine !== null) {
+    const terminal = donor.donor_serum_creatinine;
+    const peak = donor.donor_peak_creatinine;
+    if (terminal < peak * 0.7) trendLabel = 'Recovering';
+    else if (terminal > peak * 0.9) trendLabel = 'Still rising';
+    else trendLabel = 'Elevated, not recovering';
+  }
+
+  return { cr6mo, cr12mo, range, trendLabel };
+}
+
+// ---------------------------------------------------------------------------
+// Logistics Calculator (Feature D)
+// ---------------------------------------------------------------------------
+
+function calculateLogistics(
+  donor: DonorInput,
+  kdpi: number,
+): { projected: number | null; effective: number | null; riskText: string | null; usesProjected: boolean } {
+  const cit = donor.cold_ischemia_hours;
+  if (cit === null) return { projected: null, effective: null, riskText: null, usesProjected: false };
+
+  const addTransport = donor.additional_transport_hours ?? 0;
+  const timeToOR = donor.time_to_or_hours ?? 0;
+  const projected = cit + addTransport + timeToOR;
+
+  // Second pump: effective CIT = projected - 60% of pump hours (capped at 40% reduction)
+  let effective: number | null = null;
+  if (donor.second_pump_hours !== null && donor.second_pump_hours > 0) {
+    const reduction = donor.second_pump_hours * 0.6;
+    const maxReduction = projected * 0.4;
+    effective = Math.round((projected - Math.min(reduction, maxReduction)) * 10) / 10;
+  }
+
+  // Risk text by KDPI tier
+  const threshold = donor.donor_dcd ? -6 : 0;
+  const citForRisk = effective ?? projected;
+  let riskText: string;
+
+  if (kdpi > 85) {
+    if (citForRisk > 24 + threshold) riskText = 'High risk — extended CIT with high-KDPI kidney significantly increases DGF/PNF risk';
+    else if (citForRisk > 18 + threshold) riskText = 'Moderate risk — consider expedited logistics for high-KDPI donor';
+    else riskText = 'Acceptable — CIT within typical range for this KDPI tier';
+  } else if (kdpi > 50) {
+    if (citForRisk > 30 + threshold) riskText = 'Elevated risk — CIT approaching concerning levels for moderate-KDPI kidney';
+    else riskText = 'Acceptable — CIT within safe range for this donor quality';
+  } else {
+    if (citForRisk > 36 + threshold) riskText = 'Monitor — long CIT even for low-KDPI kidney may impact short-term function';
+    else riskText = 'Low risk — healthy donor tolerates typical CIT well';
+  }
+
+  return {
+    projected: Math.round(projected * 10) / 10,
+    effective,
+    riskText,
+    usesProjected: addTransport > 0 || timeToOR > 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// WIT / hemodynamic effects on graft survival (Feature E)
+// ---------------------------------------------------------------------------
+
+function getWITSurvivalDelta(donor: DonorInput): number {
+  let delta = 0;
+  if (donor.warm_ischemic_time_min !== null) {
+    if (donor.warm_ischemic_time_min > 120) delta -= 0.08;
+    else if (donor.warm_ischemic_time_min > 90) delta -= 0.05;
+    else if (donor.warm_ischemic_time_min > 60) delta -= 0.03;
+    else if (donor.warm_ischemic_time_min > 30) delta -= 0.01;
+  }
+  if (donor.hemodynamic_stability === 'prolonged-hypotension') delta -= 0.03;
+  else if (donor.hemodynamic_stability === 'gradual-decline') delta -= 0.01;
+  else if (donor.hemodynamic_stability === 'unknown') delta -= 0.01;
+  return delta;
+}
+
+// ---------------------------------------------------------------------------
+// Creatinine trend effect on graft survival (Feature G)
+// ---------------------------------------------------------------------------
+
+function getCreatinineTrendDelta(trendLabel: string | null): number {
+  if (trendLabel === 'Recovering') return 0.01;
+  if (trendLabel === 'Elevated, not recovering') return -0.02;
+  if (trendLabel === 'Still rising') return -0.04;
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
 // Core prediction function
 // ---------------------------------------------------------------------------
 
@@ -850,6 +1131,39 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
     { feature: 'donor_dcd', label: 'DCD Status', value: donor.donor_dcd, impact: donor.donor_dcd ? -0.01 : 0 },
     { feature: 'donor_serum_creatinine', label: `Creatinine (${donor.donor_serum_creatinine} mg/dL)`, value: `${donor.donor_serum_creatinine} mg/dL`, impact: donor.donor_serum_creatinine > 1.5 ? -0.02 : 0.005 },
   ];
+
+  // WIT SHAP entries (Feature E)
+  const witDelta = getWITSurvivalDelta(donor);
+  if (donor.warm_ischemic_time_min !== null && donor.warm_ischemic_time_min > 30) {
+    shapEntries.push({
+      feature: 'warm_ischemic_time',
+      label: `Warm Ischemia (${donor.warm_ischemic_time_min} min)`,
+      value: `${donor.warm_ischemic_time_min} min`,
+      impact: witDelta + (donor.hemodynamic_stability && donor.hemodynamic_stability !== 'stable' ? 0 : 0),
+    });
+  }
+  if (donor.hemodynamic_stability && donor.hemodynamic_stability !== 'stable') {
+    const hemoImpact = donor.hemodynamic_stability === 'prolonged-hypotension' ? -0.03
+      : donor.hemodynamic_stability === 'gradual-decline' ? -0.01 : -0.01;
+    shapEntries.push({
+      feature: 'hemodynamic_stability',
+      label: `Hemodynamics (${donor.hemodynamic_stability})`,
+      value: donor.hemodynamic_stability,
+      impact: hemoImpact,
+    });
+  }
+
+  // Creatinine trend (Feature G)
+  const creatinineResult = calculateCreatinine(donor, rand);
+  const trendDelta = getCreatinineTrendDelta(creatinineResult.trendLabel);
+  if (creatinineResult.trendLabel && trendDelta !== 0) {
+    shapEntries.push({
+      feature: 'creatinine_trend',
+      label: `Cr Trend (${creatinineResult.trendLabel})`,
+      value: creatinineResult.trendLabel,
+      impact: trendDelta,
+    });
+  }
 
   // Filter zero-impact entries (they add no info to SHAP chart)
   const shapValues = shapEntries.filter((s) => s.impact !== 0);
@@ -892,6 +1206,12 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
   const model_ci = isExtreme ? 6 : 3 + modelCiExtra;
   const kdpi_ci = 5 + kdpiCiExtra;
 
+  // PNF calculation (Feature B)
+  const pnfResult = calculatePNF(donor, rand);
+
+  // Logistics calculation (Feature D)
+  const logisticsResult = calculateLogistics(donor, mockKdpi);
+
   return {
     predicted_1yr_survival: predicted,
     kdpi_score: mockKdpi,
@@ -907,5 +1227,15 @@ export function getMockPrediction(donor: DonorInput, recipient?: RecipientInput 
     kdpi_ci,
     donor_dcd: donor.donor_dcd,
     donor_age: donor.donor_age,
+    pnf_risk: pnfResult.risk,
+    pnf_ci: pnfResult.ci,
+    creatinine_6mo: creatinineResult.cr6mo,
+    creatinine_12mo: creatinineResult.cr12mo,
+    creatinine_range: creatinineResult.range,
+    creatinine_trend_label: creatinineResult.trendLabel,
+    projected_total_cit: logisticsResult.projected,
+    effective_cit: logisticsResult.effective,
+    logistics_risk_text: logisticsResult.riskText,
+    uses_projected_cit: logisticsResult.usesProjected,
   };
 }
